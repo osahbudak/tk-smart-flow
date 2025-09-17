@@ -1,6 +1,6 @@
 # 🚀 TK SmartFlow - THY PR Otomasyon
 
-THY sistemindeki PR görevlerini otomatik işleyen Chrome extension'ı.
+PR kayıtlarını otomatik işleyen Chrome extension'ı.
 
 ## 🛠️ Kurulum
 
