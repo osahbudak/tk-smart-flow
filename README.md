@@ -56,4 +56,4 @@ RATE_LIMIT_DELAY: 15000   // 15 saniye
 ```
 
 ---
-**TK SmartFlow v2.1** • Turkish Technology
+**TK SmartFlow v2.1** 
