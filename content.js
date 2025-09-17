@@ -286,7 +286,7 @@ async function handleHomeFlow() {
 
 async function handleUnknownPageFlow() {
   logMessage('🔄 Bilinmeyen sayfa tespit edildi, direkt görev listesine gidiliyor');
-  const taskUrl = 'https://turuncuhat.thy.com/search/cmn_work_actvty?af=&__advancedfilter={@}.id%20in(select%20id%20from%20[dbo].[MyAndGroupActivities](52989))%20AND%20{@}.m_active=%27True%27&MID=101195';
+  const taskUrl = `${location.origin}/search/cmn_work_actvty`;
   logMessage(`🎯 Hedef URL: ${taskUrl}`);
   location.href = taskUrl;
   await waitFor(5000);
@@ -467,23 +467,42 @@ async function waitForDashboardCards() {
 
 function findTaskLink() {
   const correctHref = 'MyAndGroupActivities';
+  logMessage(`🔍 Görev kartı aranıyor - Hedef: "${correctHref}"`);
   
   // Önce direkt link ara
-  let taskLink = [...document.querySelectorAll('a[href*="cmn_work_actvty"]')].find(a => 
-    a.href.includes(correctHref)
-  );
+  const directLinks = document.querySelectorAll('a[href*="cmn_work_actvty"]');
+  logMessage(`🔗 Bulunan cmn_work_actvty linkleri: ${directLinks.length} adet`);
+  
+  let taskLink = [...directLinks].find(a => a.href.includes(correctHref));
+  
+  if (taskLink) {
+    logMessage(`✅ Direkt link bulundu: ${taskLink.href}`);
+    return taskLink;
+  }
   
   // Dashboard kartlarında ara
-  if (!taskLink) {
-    taskLink = findTaskLinkInCards();
+  logMessage('🎯 Dashboard kartlarında arama yapılıyor...');
+  taskLink = findTaskLinkInCards();
+  
+  if (taskLink) {
+    logMessage(`✅ Dashboard kartında link bulundu: ${taskLink.href}`);
+    return taskLink;
   }
   
   // Son çare: Tüm linkler arasında ara
-  if (!taskLink) {
-    taskLink = [...document.querySelectorAll('a')].find(a => 
-      (a.href || '').includes('cmn_work_actvty') && 
-      (a.href || '').includes('MyAndGroupActivities')
-    );
+  logMessage('🔍 Tüm linkler arasında son arama yapılıyor...');
+  const allLinks = document.querySelectorAll('a');
+  logMessage(`🔗 Toplam link sayısı: ${allLinks.length}`);
+  
+  taskLink = [...allLinks].find(a => 
+    (a.href || '').includes('cmn_work_actvty') && 
+    (a.href || '').includes('MyAndGroupActivities')
+  );
+  
+  if (taskLink) {
+    logMessage(`✅ Genel aramada link bulundu: ${taskLink.href}`);
+  } else {
+    logMessage('❌ Hiçbir yerde uygun link bulunamadı');
   }
   
   return taskLink;
@@ -491,19 +510,86 @@ function findTaskLink() {
 
 function findTaskLinkInCards() {
   const cards = document.querySelectorAll('.dashboard-stat');
-  for (const card of cards) {
+  logMessage(`📊 Dashboard kartları taranıyor: ${cards.length} kart bulundu`);
+  
+  // Sadece bu terimi ara
+  const targetTerm = 'Benim ve Grubumun Görevleri';
+  
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i];
     const text = card.textContent || '';
-    if (text.includes('Benim ve Grubumun Görevleri') || text.includes('Grubumun Görevleri')) {
+    const cleanText = text.replace(/\s+/g, ' ').trim(); // Fazla boşlukları temizle
+    
+    logMessage(`📋 Kart ${i+1}: "${cleanText.substring(0, 80)}..."`);
+    
+    // Tam eşleşme kontrolü
+    const isExactMatch = cleanText.includes(targetTerm);
+    
+    if (isExactMatch) {
+      // Ek güvenlik kontrolü - hariç tutulan terimler var mı?
+      const lowerText = cleanText.toLowerCase();
+      const excludeTerms = [
+        'tamamlanan', 'bitirilen', 'kapatılan', 'iptal', 
+        'raporlama', 'özet', 'istatistik', 'toplam'
+      ];
+      
+      const hasExcludeTerms = excludeTerms.some(exclude => lowerText.includes(exclude));
+      
+      if (hasExcludeTerms) {
+        logMessage(`⚠️ Kart ${i+1} "${targetTerm}" içeriyor ama hariç tutulan terimler de var: ${excludeTerms.filter(e => lowerText.includes(e)).join(', ')}`);
+        continue; // Bu kartı atla
+      }
+    }
+    
+    if (isExactMatch) {
+      logMessage(`🎯 TAM EŞLEŞME! Kart ${i+1}: "${targetTerm}"`);
+      logMessage(`📝 Tam kart içeriği: "${cleanText}"`);
+      
       const link = card.querySelector('a.more');
-      if (link) return link;
+      if (link) {
+        logMessage(`🔗 DOĞRU KART! "a.more" linki bulundu`);
+        logMessage(`📋 Link metni: "${link.textContent?.trim()}"`);
+        logMessage(`🎯 Hedef URL: ${link.href}`);
+        logMessage(`🔍 URL analizi: ${link.href.includes('MyAndGroupActivities') ? '✅ MyAndGroupActivities içeriyor' : '❌ MyAndGroupActivities içermiyor'}`);
+        return link;
+      } else {
+        logMessage(`⚠️ Kart ${i+1}'de "a.more" linki bulunamadı`);
+        
+        // Kart içindeki tüm linkleri kontrol et
+        const allLinksInCard = card.querySelectorAll('a');
+        logMessage(`🔍 Kart ${i+1}'de toplam ${allLinksInCard.length} link bulundu`);
+        
+        for (let j = 0; j < allLinksInCard.length; j++) {
+          const anyLink = allLinksInCard[j];
+          logMessage(`🔗 Link ${j+1}: "${anyLink.textContent?.trim()}" → ${anyLink.href}`);
+        }
+        
+        // İlk linki kullan
+        const anyLink = card.querySelector('a');
+        if (anyLink) {
+          logMessage(`🔗 Alternatif olarak ilk link kullanılıyor: ${anyLink.href}`);
+          return anyLink;
+        }
+      }
     }
   }
+  
+  logMessage('❌ Dashboard kartlarında tam eşleşen kart bulunamadı');
+  
+  // Debug için tüm kart içeriklerini göster
+  logMessage('🔍 DEBUG - Tüm kart içerikleri:');
+  for (let i = 0; i < cards.length; i++) {
+    const cardText = cards[i].textContent?.replace(/\s+/g, ' ').trim() || 'Boş';
+    logMessage(`Debug Kart ${i+1}: "${cardText}"`);
+  }
+  
   return null;
 }
 
 async function handleDirectNavigation() {
   logMessage('❌ Görev kartı bulunamadı, doğrudan listeye gidiliyor');
   const direct = `${location.origin}/search/cmn_work_actvty`;
+  logMessage(`🎯 Direkt navigasyon URL'si: ${direct}`);
   location.href = direct;
   await waitFor(5000);
   
