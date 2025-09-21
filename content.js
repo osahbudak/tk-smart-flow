@@ -280,25 +280,13 @@ async function handleTasksFlow() {
 }
 
 async function handleHomeFlow() {
-  logMessage('🏠 Ana sayfa tespit edildi, görev kartına geçiliyor');
+  logMessage('🏠 Ana sayfa tespit edildi, görev kartı navigasyonu başlatılıyor');
   await navigateToTasks();
 }
 
 async function handleUnknownPageFlow() {
-  logMessage('🔄 Bilinmeyen sayfa tespit edildi, direkt görev listesine gidiliyor');
-  const taskUrl = `${location.origin}/search/cmn_work_actvty`;
-  logMessage(`🎯 Hedef URL: ${taskUrl}`);
-  location.href = taskUrl;
-  await waitFor(5000);
-  
-  const newPageType = detectPageType();
-  logMessage(`📍 Yeni sayfa türü: ${newPageType}`);
-  
-  if (newPageType === PAGE_TYPES.TASKS) {
-    logMessage('✅ Görev listesi sayfasına başarıyla geçildi');
-  } else {
-    logMessage(`❌ Görev listesi sayfasına geçilemedi, mevcut tür: ${newPageType}`);
-  }
+  logMessage('🔄 Bilinmeyen sayfa tespit edildi, görev kartı navigasyonu başlatılıyor');
+  await navigateToTasks();
 }
 
 async function waitForNextCycle() {
@@ -306,6 +294,11 @@ async function waitForNextCycle() {
   
   const totalSeconds = CONFIG.WAIT_TIMEOUT / 1000;
   for (let i = totalSeconds; i > 0; i--) {
+    // Otomasyon durduruldu mu kontrol et
+    if (!autoRunEnabled) {
+      logMessage('⏹️ Otomasyon durduruldu, sayfa yenileme iptal edildi');
+      return;
+    }
     if (i % 30 === 0 || i <= 10) {
       const minutes = Math.floor(i / 60);
       const seconds = i % 60;
@@ -325,32 +318,32 @@ async function waitForNextCycle() {
 function detectPageType() {
   const url = location.href;
   const content = document.body?.textContent || '';
-  
+
   // Login sayfası kontrolü
   if (url.includes('auth.thy.com')) {
     return PAGE_TYPES.LOGIN;
   }
-  
+
   // Detay sayfası kontrolü
   if (content.includes('Müdahaleye Başla')) {
     return PAGE_TYPES.DETAIL;
   }
-  
-  // Görev listesi sayfası tespiti
-  if (url.includes('cmn_work_actvty') || content.includes('Bana ve Grubuma atanan')) {
+
+  // Görev listesi sayfası kontrolü - URL'de search/cmn_work_actvty varsa
+  if (url.includes('search/cmn_work_actvty') || url.includes('MyAndGroupActivities')) {
     return PAGE_TYPES.TASKS;
   }
-  
+
   // Ana sayfa kontrolü
   if (isHomePage(url)) {
     return PAGE_TYPES.HOME;
   }
-  
+
   // Varsayılan olarak ana sayfa (THY alan adında)
   if (url.includes('turuncuhat.thy.com')) {
     return PAGE_TYPES.HOME;
   }
-  
+
   return PAGE_TYPES.UNKNOWN;
 }
 
@@ -411,28 +404,37 @@ async function waitForRedirect(expectedUrl, maxAttempts = 30) {
 // Task Navigation
 // =====================
 async function navigateToTasks() {
-  logMessage('🎯 Görev kartı aranıyor...');
-  
-  // Ana URL kontrolü
-  if (await shouldRedirectToDefault()) {
+  if (location.href === 'https://turuncuhat.thy.com/') {
+    logMessage('🔄 Ana sayfa kök URL tespit edildi, Default.aspx\'e yönlendiriliyor...');
+    location.href = 'https://turuncuhat.thy.com/Default.aspx';
     return;
   }
-  
-  // Sekme görünürlük kontrolü
-  await waitUntilVisible(8000);
-  
-  // Dashboard kartlarının yüklenmesini bekle
-  await waitForDashboardCards();
-  
-  // Görev linkini bul
-  const taskLink = findTaskLink();
-  
-  if (!taskLink) {
-    await handleDirectNavigation();
+  const isHome = location.href === 'https://turuncuhat.thy.com/' || location.href === 'https://turuncuhat.thy.com/Default.aspx';
+  if (!isHome) {
+    logMessage('🛑 Şu an ana sayfada değiliz, kart arama yapılmayacak.');
     return;
   }
-  
-  await navigateToTaskLink(taskLink);
+  logMessage('🎯 Ana sayfadayız, üçüncü col-md-3 kartından link alınıyor...');
+  // Tüm col-md-3 kartlarını bul
+  const cards = document.querySelectorAll('.col-md-3');
+  logMessage(`📊 Bulunan col-md-3 kartları: ${cards.length} adet`);
+  // Üçüncü kartı al (index 2)
+  if (cards.length >= 3) {
+    const thirdCard = cards[2];
+    logMessage('✅ Üçüncü kart bulundu');
+    // Kart içindeki linki bul
+    const link = thirdCard.querySelector('a');
+    if (link) {
+      logMessage(`🔗 Link bulundu: ${link.href}`);
+      logMessage(`📝 Link metni: "${link.textContent?.trim()}"`);
+      link.click();
+      logMessage('👆 Kart linkine tıklandı');
+    } else {
+      logMessage('❌ Üçüncü kartta link bulunamadı');
+    }
+  } else {
+    logMessage(`❌ Yeterli kart yok: ${cards.length} adet (en az 3 gerekli)`);
+  }
 }
 
 async function shouldRedirectToDefault() {
@@ -466,158 +468,46 @@ async function waitForDashboardCards() {
 }
 
 function findTaskLink() {
-  const correctHref = 'MyAndGroupActivities';
-  logMessage(`🔍 Görev kartı aranıyor - Hedef: "${correctHref}"`);
-  
-  // Önce direkt link ara
-  const directLinks = document.querySelectorAll('a[href*="cmn_work_actvty"]');
-  logMessage(`🔗 Bulunan cmn_work_actvty linkleri: ${directLinks.length} adet`);
-  
-  let taskLink = [...directLinks].find(a => a.href.includes(correctHref));
-  
-  if (taskLink) {
-    logMessage(`✅ Direkt link bulundu: ${taskLink.href}`);
-    return taskLink;
-  }
-  
-  // Dashboard kartlarında ara
-  logMessage('🎯 Dashboard kartlarında arama yapılıyor...');
-  taskLink = findTaskLinkInCards();
-  
-  if (taskLink) {
-    logMessage(`✅ Dashboard kartında link bulundu: ${taskLink.href}`);
-    return taskLink;
-  }
-  
-  // Son çare: Tüm linkler arasında ara
-  logMessage('🔍 Tüm linkler arasında son arama yapılıyor...');
-  const allLinks = document.querySelectorAll('a');
-  logMessage(`🔗 Toplam link sayısı: ${allLinks.length}`);
-  
-  taskLink = [...allLinks].find(a => 
-    (a.href || '').includes('cmn_work_actvty') && 
-    (a.href || '').includes('MyAndGroupActivities')
-  );
-  
-  if (taskLink) {
-    logMessage(`✅ Genel aramada link bulundu: ${taskLink.href}`);
+  logMessage('🎯 Üçüncü col-md-3 kartından link alınıyor...');
+  // Tüm col-md-3 kartlarını bul
+  const cards = document.querySelectorAll('.col-md-3');
+  logMessage(`📊 Bulunan col-md-3 kartları: ${cards.length} adet`);
+  // Üçüncü kartı al (index 2)
+  if (cards.length >= 3) {
+    const thirdCard = cards[2];
+    logMessage('✅ Üçüncü kart bulundu');
+    // Kart içindeki linki bul
+    const link = thirdCard.querySelector('a');
+    if (link) {
+      logMessage(`🔗 Link bulundu: ${link.href}`);
+      logMessage(`📝 Link metni: "${link.textContent?.trim()}"`);
+      return link;
+    } else {
+      logMessage('❌ Üçüncü kartta link bulunamadı');
+    }
   } else {
-    logMessage('❌ Hiçbir yerde uygun link bulunamadı');
+    logMessage(`❌ Yeterli kart yok: ${cards.length} adet (en az 3 gerekli)`);
   }
-  
-  return taskLink;
-}
-
-function findTaskLinkInCards() {
-  const cards = document.querySelectorAll('.dashboard-stat');
-  logMessage(`📊 Dashboard kartları taranıyor: ${cards.length} kart bulundu`);
-  
-  // Sadece bu terimi ara
-  const targetTerm = 'Benim ve Grubumun Görevleri';
-  
-  for (let i = 0; i < cards.length; i++) {
-    const card = cards[i];
-    const text = card.textContent || '';
-    const cleanText = text.replace(/\s+/g, ' ').trim(); // Fazla boşlukları temizle
-    
-    logMessage(`📋 Kart ${i+1}: "${cleanText.substring(0, 80)}..."`);
-    
-    // Tam eşleşme kontrolü
-    const isExactMatch = cleanText.includes(targetTerm);
-    
-    if (isExactMatch) {
-      // Ek güvenlik kontrolü - hariç tutulan terimler var mı?
-      const lowerText = cleanText.toLowerCase();
-      const excludeTerms = [
-        'tamamlanan', 'bitirilen', 'kapatılan', 'iptal', 
-        'raporlama', 'özet', 'istatistik', 'toplam'
-      ];
-      
-      const hasExcludeTerms = excludeTerms.some(exclude => lowerText.includes(exclude));
-      
-      if (hasExcludeTerms) {
-        logMessage(`⚠️ Kart ${i+1} "${targetTerm}" içeriyor ama hariç tutulan terimler de var: ${excludeTerms.filter(e => lowerText.includes(e)).join(', ')}`);
-        continue; // Bu kartı atla
-      }
-    }
-    
-    if (isExactMatch) {
-      logMessage(`🎯 TAM EŞLEŞME! Kart ${i+1}: "${targetTerm}"`);
-      logMessage(`📝 Tam kart içeriği: "${cleanText}"`);
-      
-      const link = card.querySelector('a.more');
-      if (link) {
-        logMessage(`🔗 DOĞRU KART! "a.more" linki bulundu`);
-        logMessage(`📋 Link metni: "${link.textContent?.trim()}"`);
-        logMessage(`🎯 Hedef URL: ${link.href}`);
-        logMessage(`🔍 URL analizi: ${link.href.includes('MyAndGroupActivities') ? '✅ MyAndGroupActivities içeriyor' : '❌ MyAndGroupActivities içermiyor'}`);
-        return link;
-      } else {
-        logMessage(`⚠️ Kart ${i+1}'de "a.more" linki bulunamadı`);
-        
-        // Kart içindeki tüm linkleri kontrol et
-        const allLinksInCard = card.querySelectorAll('a');
-        logMessage(`🔍 Kart ${i+1}'de toplam ${allLinksInCard.length} link bulundu`);
-        
-        for (let j = 0; j < allLinksInCard.length; j++) {
-          const anyLink = allLinksInCard[j];
-          logMessage(`🔗 Link ${j+1}: "${anyLink.textContent?.trim()}" → ${anyLink.href}`);
-        }
-        
-        // İlk linki kullan
-        const anyLink = card.querySelector('a');
-        if (anyLink) {
-          logMessage(`🔗 Alternatif olarak ilk link kullanılıyor: ${anyLink.href}`);
-          return anyLink;
-        }
-      }
-    }
-  }
-  
-  logMessage('❌ Dashboard kartlarında tam eşleşen kart bulunamadı');
-  
-  // Debug için tüm kart içeriklerini göster
-  logMessage('🔍 DEBUG - Tüm kart içerikleri:');
-  for (let i = 0; i < cards.length; i++) {
-    const cardText = cards[i].textContent?.replace(/\s+/g, ' ').trim() || 'Boş';
-    logMessage(`Debug Kart ${i+1}: "${cardText}"`);
-  }
-  
   return null;
 }
 
 async function handleDirectNavigation() {
-  logMessage('❌ Görev kartı bulunamadı, doğrudan listeye gidiliyor');
-  const direct = `${location.origin}/search/cmn_work_actvty`;
-  logMessage(`🎯 Direkt navigasyon URL'si: ${direct}`);
-  location.href = direct;
-  await waitFor(5000);
+  logMessage('❌ Görev kartı bulunamadı');
+  logMessage('⚠️ Lütfen "Benim ve Grubumun Görevleri" kartını manuel olarak açın');
   
-  await waitForRateLimit();
-  await processPRTasks();
+  // Kullanıcıya uyarı göster
+  alert('Görev kartı bulunamadı. Lütfen "Benim ve Grubumun Görevleri" kartını manuel olarak açın.');
 }
 
 async function navigateToTaskLink(taskLink) {
   logMessage(`🔗 Görev kartına tıklanıyor: ${taskLink.href}`);
-  
   const beforeUrl = location.href;
   taskLink.click();
-  
-  // Sayfa değişimi bekle
-  const success = await waitForPageChange(beforeUrl);
-  
-  if (success) {
-    logMessage('✅ Görev sayfasına geçiş başarılı');
-    await waitForRateLimit();
-    await processPRTasks();
-  } else {
-    // Alternatif: Direct navigation
-    logMessage('🔄 Direct navigation deneniyor');
-    location.href = taskLink.href;
-    await waitFor(5000);
-    await waitForRateLimit();
-    await processPRTasks();
-  }
+  logMessage('👆 Kart linkine tıklandı');
+  // Sayfa değişimini bekle
+  await waitForPageChange(beforeUrl);
+  // Doğrudan PR taramaya başla
+  await processPRTasks();
 }
 
 async function waitForPageChange(beforeUrl, maxAttempts = 60) {
@@ -755,11 +645,16 @@ async function handleNoPRsFound() {
 async function processFoundPRs(foundPRs) {
   const queue = foundPRs.slice(0, CONFIG.MAX_RECORDS);
   logMessage(`⚡ ${queue.length} PR işlenecek (max: ${CONFIG.MAX_RECORDS})`);
-  
+
   for (let i = 0; i < queue.length; i++) {
+    // Otomasyon durduruldu mu kontrol et
+    if (!autoRunEnabled) {
+      logMessage('⏹️ Otomasyon durduruldu, PR işleme iptal edildi');
+      return;
+    }
     const pr = queue[i];
     logMessage(`🎯 İşleniyor: ${i+1}/${queue.length} - ${pr.code}`);
-    
+
     try {
       await processSinglePR(pr, i, queue.length);
     } catch (error) {
@@ -769,10 +664,43 @@ async function processFoundPRs(foundPRs) {
       pr.cell.style.outline = '';
       logMessage(`🧹 ${pr.code} vurgu temizlendi`);
     }
-    
+
     logMessage(`⏳ ${pr.code} işlemi tamamlandı, 2 saniye bekle`);
     await waitFor(CONFIG.PROCESSING_DELAY);
   }
+  // Son bekleme öncesi dur sinyali kontrol et
+  if (!autoRunEnabled) {
+    logMessage('⏹️ Otomasyon durduruldu, sayfa yenileme atlandı');
+    return;
+  }
+  // Tüm PR'lar tamamlandıktan sonra 2,5 dakika bekle ve sayfayı yenile
+  logMessage('✅ Tüm PR\'ler tamamlandı, 2,5 dakika bekleniyor...');
+  // Beklemeyi küçük parçalara böl ki dur sinyali kontrol edilebilsin
+  const totalWaitTime = CONFIG.WAIT_TIMEOUT;
+  const checkInterval = 5000; // Her 5 saniyede kontrol et
+  const iterations = Math.ceil(totalWaitTime / checkInterval);
+  for (let i = 0; i < iterations; i++) {
+    if (!autoRunEnabled) {
+      logMessage('⏹️ Otomasyon durduruldu, sayfa yenileme iptal edildi');
+      return;
+    }
+    const waitTime = Math.min(checkInterval, totalWaitTime - (i * checkInterval));
+    await waitFor(waitTime);
+    // Her 30 saniyede kalan süreyi logla
+    const remainingTime = totalWaitTime - ((i + 1) * checkInterval);
+    if (remainingTime > 0 && remainingTime % 30000 === 0) {
+      const minutes = Math.floor(remainingTime / 60000);
+      const seconds = Math.floor((remainingTime % 60000) / 1000);
+      logMessage(`⏳ Sayfa yenileme: ${minutes}dk ${seconds}sn kaldı`);
+    }
+  }
+  // Sayfa yenileme öncesi son kontrol
+  if (!autoRunEnabled) {
+    logMessage('⏹️ Otomasyon durduruldu, sayfa yenileme iptal edildi');
+    return;
+  }
+  logMessage('🔄 Sayfa yenileniyor...');
+  location.reload();
 }
 
 async function processSinglePR(pr, index, total) {
@@ -792,7 +720,6 @@ async function processSinglePR(pr, index, total) {
   
   if (pageChanged) {
     const success = await handlePRIntervention(pr.code);
-    await returnToTaskList(index, total);
   } else {
     logMessage(`❌ ${pr.code} detay sayfası açılamadı - URL değişmedi`);
   }
@@ -837,16 +764,7 @@ async function handlePRIntervention(prCode) {
   return success;
 }
 
-async function returnToTaskList(index, total) {
-  logMessage(`↩️ İşlem tamamlandı, ana sayfaya dönülüyor`);
-  await returnToHome();
-  
-  if (index < total - 1) {
-    logMessage(`⏳ Sonraki PR için 3 saniye bekle ve görev listesine dön`);
-    await waitFor(3000);
-    await navigateToTasks();
-  }
-}
+// returnToTaskList ve returnToHome fonksiyonlarını tamamen kaldır
 
 // =====================
 // PR Status Checking
@@ -1008,13 +926,16 @@ function stopAutoRun() {
     clearInterval(autoRunInterval);
     autoRunInterval = null;
   }
-  
   // Çalışan işlemi de durdur
   if (isRunning) {
     isRunning = false;
     logMessage('⏹️ Çalışan işlem zorla durduruldu');
   }
-  
+  // İşleme kilidini temizle
+  if (window.processingPRTasks) {
+    window.processingPRTasks = false;
+    logMessage('⏹️ PR işleme kilidi temizlendi');
+  }
   logMessage('⏹️ Auto-run modu tamamen durduruldu');
 }
 
