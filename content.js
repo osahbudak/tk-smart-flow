@@ -543,6 +543,13 @@ async function processPRTasks() {
     
     // Tablo yüklenmesini bekle
     await waitForTableLoad();
+
+    // Sıralama işlemini garantiye al
+    const sorted = await sortByCreatedDateDescending();
+    if (!sorted) {
+      logMessage('❌ Sıralama işlemi başarısız olduğu için PR işlemeye geçilmiyor.');
+      return;
+    }
     
     // PR'ları tara ve analiz et
     const foundPRs = await scanForPRs();
@@ -891,6 +898,31 @@ window.TK_SmartFlow = {
   skipWait: async () => {
     logMessage('⚡ Rate limit atlanarak PR taraması başlatılıyor');
     await processPRTasks();
+  },
+  
+  testSort: async () => {
+    logMessage('🧪 Sıralama testi başlatılıyor...');
+    const result = await sortByCreatedDateDescending();
+    logMessage(`🧪 Sıralama test sonucu: ${result ? 'BAŞARILI' : 'BAŞARISIZ'}`);
+    return result;
+  },
+  
+  debugSort: () => {
+    const th = document.querySelector('th[sort="m_created_dt"]');
+    if (th) {
+      console.log('🔍 Sıralama elementi:', th);
+      console.log('🔍 Class:', th.className);
+      console.log('🔍 HTML:', th.outerHTML);
+      console.log('🔍 İçerik:', th.innerHTML);
+      
+      const clickable = th.querySelector('button, a, span') || th;
+      console.log('🔍 Tıklanacak element:', clickable);
+      
+      return { element: th, clickable: clickable, className: th.className };
+    } else {
+      console.log('❌ Sıralama elementi bulunamadı');
+      return null;
+    }
   }
 };
 
@@ -950,6 +982,211 @@ function waitUntilVisible(timeoutMs = 5000) {
     }
     resolve();
   });
+}
+
+// =====================
+// Table Sorting Utility
+// =====================
+async function sortByCreatedDateDescending(maxAttempts = 3) {
+  // Daha uzun bekle - sayfa tam yüklensin
+  await waitFor(1000);
+  
+  // Element bulma fonksiyonu - her seferinde fresh element bul
+  function findCreatedDateElement() {
+    return document.querySelector('th[sort="m_created_dt"]');
+  }
+  
+  let createdDateTh = findCreatedDateElement();
+  if (!createdDateTh) {
+    logMessage('❌ "Oluşturma Tarihi" başlığı bulunamadı, sıralama atlandı');
+    return false;
+  }
+  
+  logMessage('🔽 Sıralama: "Oluşturma Tarihi" başlığı bulundu, tıklama hazırlığı');
+  
+  // HTML yapısını debug et
+  function debugElementStructure(element, label) {
+    logMessage(`🔍 ${label} HTML: ${element.outerHTML.substring(0, 200)}...`);
+    logMessage(`🔍 ${label} className: "${element.className}"`);
+    logMessage(`🔍 ${label} sortof: "${element.getAttribute('sortof') || 'yok'}"`);
+  }
+  
+  debugElementStructure(createdDateTh, 'İlk durum');
+  
+  let attempt = 0;
+  let sorted = false;
+  
+  // İlk 3 satırın ID'lerini al (sıralama kontrolü için)
+  function getFirstRowsIds() {
+    const rows = document.querySelectorAll('tbody tr');
+    const ids = [];
+    for (let i = 0; i < Math.min(3, rows.length); i++) {
+      const firstCell = rows[i].querySelector('td');
+      if (firstCell) {
+        ids.push(firstCell.textContent?.trim() || '');
+      }
+    }
+    return ids.join(',');
+  }
+  
+  let rowsOrderBefore = getFirstRowsIds();
+  logMessage(`🔽 Sıralama öncesi ilk 3 satır: ${rowsOrderBefore}`);
+  
+  // Mevcut sıralama durumunu kontrol et - hem class hem sortof attribute'unu kontrol et
+  function getCurrentSortState(element) {
+    const className = element.className;
+    const sortof = element.getAttribute('sortof');
+    
+    const isDesc = className.includes('sorting_desc') || sortof === 'desc';
+    const isAsc = className.includes('sorting_asc') || sortof === 'asc';
+    
+    return { isDesc, isAsc, className, sortof };
+  }
+  
+  const currentState = getCurrentSortState(createdDateTh);
+  logMessage(`🔽 Sıralama durumu: class="${currentState.className}", sortof="${currentState.sortof}"`);
+  logMessage(`🔽 Durum: ${currentState.isAsc ? 'ASC (artan)' : currentState.isDesc ? 'DESC (azalan)' : 'belirsiz'}`);
+  
+  // Eğer zaten DESC sıralamadaysa, sıralama yapmaya gerek yok
+  if (currentState.isDesc) {
+    logMessage('✅ Tablo zaten DESC sıralamada, en yeni kayıtlar yukarıda');
+    return true;
+  }
+  
+  while (attempt < maxAttempts && !sorted) {
+    logMessage(`🔽 Sıralama: "Oluşturma Tarihi" başlığına tıklama (deneme ${attempt+1})`);
+    
+    // Her tıklamada fresh element bul
+    createdDateTh = findCreatedDateElement();
+    if (!createdDateTh) {
+      logMessage('❌ Element kayboldu, sıralama iptal ediliyor');
+      break;
+    }
+    
+    // Tıklanacak elementi bul
+    let clickable = createdDateTh.querySelector('button, a, span');
+    if (!clickable) clickable = createdDateTh;
+    
+    // Tıklama öncesi durumu kaydet
+    const beforeState = getCurrentSortState(createdDateTh);
+    logMessage(`🔽 Tıklama öncesi: class="${beforeState.className}", sortof="${beforeState.sortof}"`);
+    
+    // Tek tıklama (ASC → DESC için)
+    clickable.click();
+    logMessage('🔽 Sıralama: Tıklama yapıldı, sıralama işlemi bekleniyor...');
+    
+    // Kısa bekle ve hemen HTML değişimini kontrol et
+    await waitFor(2000);
+    
+    // Fresh element bul - HTML değişmiş olabilir
+    let currentElement = findCreatedDateElement();
+    if (currentElement) {
+      debugElementStructure(currentElement, `Tıklama sonrası (2sn) - Deneme ${attempt+1}`);
+    }
+    
+    // Orta bekle ve tekrar kontrol et
+    await waitFor(10000);
+    currentElement = findCreatedDateElement();
+    if (currentElement) {
+      debugElementStructure(currentElement, `Tıklama sonrası (12sn) - Deneme ${attempt+1}`);
+    }
+    
+    // Tam bekleme süresi
+    await waitFor(18000); // Toplam 30 saniye
+    
+    // Final element ve durumu kontrol et
+    currentElement = findCreatedDateElement();
+    if (!currentElement) {
+      logMessage('❌ Final element bulunamadı');
+      break;
+    }
+    
+    const afterState = getCurrentSortState(currentElement);
+    logMessage(`🔽 Sıralama sonrası: class="${afterState.className}", sortof="${afterState.sortof}"`);
+    logMessage(`🔽 Durum: ${afterState.isAsc ? 'ASC (artan)' : afterState.isDesc ? 'DESC (azalan)' : 'belirsiz'}`);
+    debugElementStructure(currentElement, `Final durum - Deneme ${attempt+1}`);
+    
+    let rowsOrderAfter = getFirstRowsIds();
+    logMessage(`🔽 Sıralama sonrası ilk 3 satır: ${rowsOrderAfter}`);
+    
+    // DESC sıralamaya geçtiyse başarılı
+    if (afterState.isDesc) {
+      sorted = true;
+      logMessage('✅ Sıralama işlemi başarılı, en yeni kayıtlar yukarıda (DESC sıralama)');
+      break;
+    }
+    
+    // Eğer ASC sıralamaya geçtiyse, bir kez daha tıkla (ASC → DESC)
+    if (afterState.isAsc && (beforeState.className !== afterState.className || beforeState.sortof !== afterState.sortof)) {
+      logMessage('🔄 ASC sıralamaya geçti, DESC için bir kez daha tıklanacak');
+      await waitFor(2000);
+      
+      // Fresh element bul
+      const refreshedTh = findCreatedDateElement();
+      if (refreshedTh) {
+        let refreshedClickable = refreshedTh.querySelector('button, a, span');
+        if (!refreshedClickable) refreshedClickable = refreshedTh;
+        
+        logMessage('🔽 İkinci tıklama: ASC → DESC dönüşümü için');
+        refreshedClickable.click();
+        
+        // İkinci tıklama sonrası bekle
+        await waitFor(15000);
+        
+        const finalElement = findCreatedDateElement();
+        if (finalElement) {
+          const finalState = getCurrentSortState(finalElement);
+          
+          if (finalState.isDesc) {
+            sorted = true;
+            logMessage('✅ İkinci tıklama başarılı, DESC sıralamaya geçildi');
+            break;
+          }
+        }
+      }
+    }
+    
+    // Satır sırası değiştiyse de kontrol et
+    if (rowsOrderBefore !== rowsOrderAfter) {
+      // İlk satırdaki tarihi kontrol et - daha yeni bir tarih mi?
+      const firstRowAfter = document.querySelector('tbody tr:first-child td:nth-child(3)');
+      if (firstRowAfter) {
+        const dateText = firstRowAfter.textContent.trim();
+        logMessage(`🔽 İlk satırdaki tarih: ${dateText}`);
+        // Eğer 2025 yılından bir tarih varsa büyük ihtimalle yeni kayıtlar üstte
+        if (dateText.includes('2025')) {
+          sorted = true;
+          logMessage('✅ Sıralama işlemi başarılı, yeni tarihli kayıtlar yukarıda');
+          break;
+        }
+      }
+    }
+    
+    rowsOrderBefore = rowsOrderAfter;
+    attempt++;
+    
+    if (attempt < maxAttempts) {
+      logMessage(`⏳ Sıralama henüz DESC olmadı, ${attempt + 1}. deneme için 5 saniye bekleniyor...`);
+      await waitFor(5000);
+      
+      // Element referansını yenile - HTML değişmiş olabilir
+      const newCreatedDateTh = findCreatedDateElement();
+      if (newCreatedDateTh) {
+        logMessage('🔄 Element referansı yenilendi');
+        debugElementStructure(newCreatedDateTh, 'Yenilenen element');
+      } else {
+        logMessage('❌ Element artık bulunamıyor, döngü sonlandırılıyor');
+        break;
+      }
+    }
+  }
+  
+  if (!sorted) {
+    logMessage('❌ Sıralama işlemi başarısız, satır sırası değişmedi');
+    logMessage('🔍 Debug: Tablo interaktif olmayabilir, sıralama fonksiyonu çalışmıyor olabilir');
+  }
+  
+  return sorted;
 }
 
 // =====================
