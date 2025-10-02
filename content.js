@@ -6,7 +6,7 @@
 // Constants & Configuration
 // =====================
 const CONFIG = {
-  MAX_RECORDS: 50000,
+  MAX_RECORDS: 15, // Sadece 15 PR kontrol et - zaten en güncele göre sıralı
   WAIT_TIMEOUT: 150000, // 2.5 minutes
   RATE_LIMIT_DELAY: 15000, // 15 seconds
   AUTO_RUN_INTERVAL: 45000, // 45 seconds
@@ -720,7 +720,7 @@ async function processSinglePR(pr, index, total) {
   const beforeUrl = location.href;
   logMessage(`👆 ${pr.code} satırına tıklanıyor`);
   pr.cell.click();
-  await waitFor(3000);
+  await waitFor(20000);
   
   // Detay sayfası kontrolü
   const pageChanged = await checkDetailPageNavigation(beforeUrl, pr.code);
