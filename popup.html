@@ -1,411 +1,527 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body { 
-      width: 380px; 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      background: #ffffff;
-      color: #1f2937;
-      overflow: hidden;
-    }
-    
-    .header {
-      background: linear-gradient(135deg, #e30613 0%, #dc2626 100%);
-      color: white;
-      padding: 24px 20px;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .header::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 100px;
-      height: 100px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 50%;
-      transform: translate(30px, -30px);
-    }
-    
-    .header::after {
-      content: 'TURKISH TECHNOLOGY';
-      position: absolute;
-      bottom: 8px;
-      right: 12px;
-      font-size: 8px;
-      font-weight: 600;
-      opacity: 0.4;
-      letter-spacing: 1px;
-      z-index: 1;
-    }
-    
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      position: relative;
-      z-index: 1;
-    }
-    
-    .logo {
-      width: 40px;
-      height: 40px;
-      background: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-    
-    .logo img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-    
-    .brand-text {
-      flex: 1;
-    }
-    
-    .brand-title {
-      font-size: 20px;
-      font-weight: 700;
-      margin-bottom: 3px;
-      letter-spacing: -0.025em;
-    }
-    
-    .brand-subtitle {
-      font-size: 13px;
-      opacity: 0.9;
-      font-weight: 500;
-    }
-    
-    .main {
-      padding: 24px 20px 20px;
-    }
-    
-    .status-card {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 16px;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      transition: all 0.2s ease;
-    }
-    
-    .status-card.active {
-      background: #ecfdf5;
-      border-color: #10b981;
-    }
-    
-    .status-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #6b7280;
-      flex-shrink: 0;
-    }
-    
-    .status-card.active .status-indicator {
-      background: #10b981;
-      animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-    
-    .status-text {
-      font-size: 14px;
-      font-weight: 500;
-      color: #374151;
-      flex: 1;
-    }
-    
-    .status-card.active .status-text {
-      color: #065f46;
-    }
-    
-    .controls {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-    
-    .advanced-controls {
-      margin-bottom: 24px;
-    }
-    
-    .quick-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 8px;
-    }
-    
-    .quick-actions button:nth-child(3) {
-      grid-column: span 2;
-    }
-    
-    .btn-compact {
-      background: #f3f4f6;
-      color: #374151;
-      padding: 10px 14px;
-      font-size: 13px;
-      font-weight: 500;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    .btn-compact:hover:not(:disabled) {
-      background: #e5e7eb;
-      transform: translateY(-1px);
-    }
-    
-    .btn-compact:disabled {
-      background: #f9fafb;
-      color: #9ca3af;
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
-    
-    .btn {
-      padding: 14px 20px;
-      border: none;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-family: inherit;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    
-    .btn:active {
-      transform: translateY(0);
-    }
-    
-    .btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none !important;
-      box-shadow: none !important;
-    }
-    
-    .btn-primary {
-      background: #e30613;
-      color: white;
-      box-shadow: 0 2px 4px rgba(227, 6, 19, 0.2);
-    }
-    
-    .btn-primary:hover:not(:disabled) {
-      background: #dc2626;
-    }
-    
-    .btn-secondary {
-      background: #6b7280;
-      color: white;
-      box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
-    }
-    
-    .btn-secondary:hover:not(:disabled) {
-      background: #4b5563;
-    }
-    
-    
-    .metrics {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    
-    .metrics:has(.single) {
-      grid-template-columns: 1fr;
-    }
-    
-    .metric-card {
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      padding: 16px;
-      text-align: center;
-    }
-    
-    .metric-value {
-      font-size: 24px;
-      font-weight: 700;
-      color: #e30613;
-      display: block;
-      margin-bottom: 4px;
-    }
-    
-    .metric-label {
-      font-size: 12px;
-      color: #6b7280;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    
-    .activity-section {
-      margin-top: 20px;
-    }
-    
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-    
-    .section-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #374151;
-    }
-    
-    .activity-log {
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      height: 160px;
-      overflow-y: auto;
-      padding: 12px;
-    }
-    
-    .activity-log::-webkit-scrollbar {
-      width: 4px;
-    }
-    
-    .activity-log::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    
-    .activity-log::-webkit-scrollbar-thumb {
-      background: #d1d5db;
-      border-radius: 2px;
-    }
-    
-    .log-entry {
-      font-size: 12px;
-      line-height: 1.4;
-      margin-bottom: 8px;
-      color: #6b7280;
-      font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, monospace;
-    }
-    
-    .log-entry:last-child {
-      margin-bottom: 0;
-    }
-    
-    .log-entry.success {
-      color: #10b981;
-    }
-    
-    .log-entry.error {
-      color: #ef4444;
-    }
-    
-    .log-entry.warning {
-      color: #f59e0b;
-    }
-    
-    .footer {
-      padding: 16px 20px;
-      border-top: 1px solid #f3f4f6;
-      text-align: center;
-    }
-    
-    .version-info {
-      font-size: 11px;
-      color: #9ca3af;
-      font-weight: 500;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="brand">
-      <div class="logo">
-        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="50" cy="50" r="45" fill="#663399"/>
-          <path d="M30 35 L70 35 L70 45 L55 45 L55 65 L45 65 L45 45 L30 45 Z" fill="white"/>
-          <circle cx="50" cy="25" r="8" fill="#e30613"/>
-        </svg>
-      </div>
-      <div class="brand-text">
-        <div class="brand-title">TK SmartFlow</div>
-        <div class="brand-subtitle">PR Intervention Extension</div>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 380px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+          sans-serif;
+        background: #ffffff;
+        color: #1f2937;
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #e30613 0%, #dc2626 100%);
+        color: white;
+        padding: 24px 20px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .header::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(30px, -30px);
+      }
+
+      .header::after {
+        content: "TURKISH TECHNOLOGY";
+        position: absolute;
+        bottom: 8px;
+        right: 12px;
+        font-size: 8px;
+        font-weight: 600;
+        opacity: 0.4;
+        letter-spacing: 1px;
+        z-index: 1;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .logo {
+        width: 40px;
+        height: 40px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .brand-text {
+        flex: 1;
+      }
+
+      .brand-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 3px;
+        letter-spacing: -0.025em;
+      }
+
+      .brand-subtitle {
+        font-size: 13px;
+        opacity: 0.9;
+        font-weight: 500;
+      }
+
+      .main {
+        padding: 24px 20px 20px;
+      }
+
+      .status-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        transition: all 0.2s ease;
+      }
+
+      .status-card.active {
+        background: #ecfdf5;
+        border-color: #10b981;
+      }
+
+      .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #6b7280;
+        flex-shrink: 0;
+      }
+
+      .status-card.active .status-indicator {
+        background: #10b981;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .status-text {
+        font-size: 14px;
+        font-weight: 500;
+        color: #374151;
+        flex: 1;
+      }
+
+      .status-card.active .status-text {
+        color: #065f46;
+      }
+
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .advanced-controls {
+        margin-bottom: 24px;
+      }
+
+      .quick-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .quick-actions button:nth-child(3) {
+        grid-column: span 2;
+      }
+
+      .btn-compact {
+        background: #f3f4f6;
+        color: #374151;
+        padding: 10px 14px;
+        font-size: 13px;
+        font-weight: 500;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .btn-compact:hover:not(:disabled) {
+        background: #e5e7eb;
+        transform: translateY(-1px);
+      }
+
+      .btn-compact:disabled {
+        background: #f9fafb;
+        color: #9ca3af;
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .btn {
+        padding: 14px 20px;
+        border: none;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: inherit;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .btn:active {
+        transform: translateY(0);
+      }
+
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+        box-shadow: none !important;
+      }
+
+      .btn-primary {
+        background: #e30613;
+        color: white;
+        box-shadow: 0 2px 4px rgba(227, 6, 19, 0.2);
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        background: #dc2626;
+      }
+
+      .btn-secondary {
+        background: #6b7280;
+        color: white;
+        box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
+      }
+
+      .btn-secondary:hover:not(:disabled) {
+        background: #4b5563;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .metrics:has(.single) {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-card {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 16px;
+        text-align: center;
+      }
+
+      .metric-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #e30613;
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .metric-label {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .activity-section {
+        margin-top: 20px;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+
+      .section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .activity-log {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        height: 160px;
+        overflow-y: auto;
+        padding: 12px;
+      }
+
+      .activity-log::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      .activity-log::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .activity-log::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 2px;
+      }
+
+      .log-entry {
+        font-size: 12px;
+        line-height: 1.4;
+        margin-bottom: 8px;
+        color: #6b7280;
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas,
+          monospace;
+      }
+
+      .log-entry:last-child {
+        margin-bottom: 0;
+      }
+
+      .log-entry.success {
+        color: #10b981;
+      }
+
+      .log-entry.error {
+        color: #ef4444;
+      }
+
+      .log-entry.warning {
+        color: #f59e0b;
+      }
+
+      .settings-section {
+        margin-top: 20px;
+      }
+
+      .setting-item {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px 16px;
+      }
+
+      .setting-label {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .setting-hint {
+        font-size: 11px;
+        font-weight: 400;
+        color: #6b7280;
+      }
+
+      .setting-input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #1f2937;
+        background: white;
+        transition: all 0.2s;
+      }
+
+      .setting-input:focus {
+        outline: none;
+        border-color: #e30613;
+        box-shadow: 0 0 0 3px rgba(227, 6, 19, 0.1);
+      }
+
+      .setting-input:hover {
+        border-color: #9ca3af;
+      }
+
+      .input-with-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .input-with-info .setting-input {
+        flex: 1;
+      }
+
+      .setting-info {
+        font-size: 13px;
+        font-weight: 600;
+        color: #e30613;
+        white-space: nowrap;
+        padding: 4px 8px;
+        background: rgba(227, 6, 19, 0.1);
+        border-radius: 4px;
+      }
+
+      .footer {
+        padding: 16px 20px;
+        border-top: 1px solid #f3f4f6;
+        text-align: center;
+      }
+
+      .version-info {
+        font-size: 11px;
+        color: #9ca3af;
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="brand">
+        <div class="logo">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="45" fill="#663399" />
+            <path
+              d="M30 35 L70 35 L70 45 L55 45 L55 65 L45 65 L45 45 L30 45 Z"
+              fill="white"
+            />
+            <circle cx="50" cy="25" r="8" fill="#e30613" />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">TK SmartFlow</div>
+          <div class="brand-subtitle">PR Intervention Extension</div>
+        </div>
       </div>
     </div>
-  </div>
-  
-  <div class="main">
-    <div id="statusCard" class="status-card inactive">
-      <div class="status-indicator"></div>
-      <div class="status-text" id="statusText">Sistem Hazır</div>
-    </div>
-    
-    <div class="controls">
-      <button id="startBtn" class="btn btn-primary">Otomasyonu Başlat</button>
-      <button id="stopBtn" class="btn btn-secondary" style="display:none">Otomasyonu Durdur</button>
-    </div>
-    
-    <div class="advanced-controls">
-      <div class="section-header">
-        <div class="section-title">Hızlı İşlemler</div>
+
+    <div class="main">
+      <div id="statusCard" class="status-card inactive">
+        <div class="status-indicator"></div>
+        <div class="status-text" id="statusText">Sistem Hazır</div>
       </div>
-      <div class="quick-actions">
-        <button id="runOnceBtn" class="btn btn-compact" disabled>🚀 Tek Seferlik Çalıştır</button>
-        <button id="skipWaitBtn" class="btn btn-compact" disabled>⚡ Hızlı Tarama</button>
-        <button id="analyzeBtn" class="btn btn-compact" disabled>📊 Sistem Analizi</button>
+
+      <div class="controls">
+        <button id="startBtn" class="btn btn-primary">Otomasyonu Başlat</button>
+        <button id="stopBtn" class="btn btn-secondary" style="display: none">
+          Otomasyonu Durdur
+        </button>
+      </div>
+
+      <div class="advanced-controls">
+        <div class="section-header">
+          <div class="section-title">Hızlı İşlemler</div>
+        </div>
+        <div class="quick-actions">
+          <button id="runOnceBtn" class="btn btn-compact" disabled>
+            🚀 Tek Seferlik Çalıştır
+          </button>
+          <button id="skipWaitBtn" class="btn btn-compact" disabled>
+            ⚡ Hızlı Tarama
+          </button>
+          <button id="analyzeBtn" class="btn btn-compact" disabled>
+            📊 Sistem Analizi
+          </button>
+        </div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric-card single">
+          <span class="metric-value" id="processedCount">0</span>
+          <div class="metric-label">İşlenen PR Sayısı</div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="section-header">
+          <div class="section-title">⚙️ Ayarlar</div>
+        </div>
+        <div class="setting-item">
+          <label for="waitTimeout" class="setting-label">
+            <span>Sayfa Yenileme Aralığı (saniye)</span>
+            <span class="setting-hint"
+              >Tüm PR'ler işlendikten sonra yeni PR kontrolü için bekleme
+              süresi</span
+            >
+          </label>
+          <div class="input-with-info">
+            <input
+              type="number"
+              id="waitTimeout"
+              class="setting-input"
+              min="60"
+              max="1800"
+              step="15"
+              value="300"
+              required
+            />
+            <span class="setting-info" id="waitTimeoutInfo">= 5 dakika</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="activity-section">
+        <div class="section-header">
+          <div class="section-title">Sistem Aktivitesi</div>
+        </div>
+        <div class="activity-log" id="activityLog">
+          <div class="log-entry">Sistem başlatılmaya hazır...</div>
+        </div>
       </div>
     </div>
-    
-    <div class="metrics">
-      <div class="metric-card single">
-        <span class="metric-value" id="processedCount">0</span>
-        <div class="metric-label">İşlenen PR Sayısı</div>
+
+    <div class="footer">
+      <div class="version-info">
+        SmartFlow v2.2 • Turkish Technology • Intelligent PR Automation
       </div>
     </div>
-    
-    <div class="activity-section">
-      <div class="section-header">
-        <div class="section-title">Sistem Aktivitesi</div>
-      </div>
-      <div class="activity-log" id="activityLog">
-        <div class="log-entry">Sistem başlatılmaya hazır...</div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="footer">
-    <div class="version-info">SmartFlow v2.2 • Turkish Technology • Intelligent PR Automation</div>
-  </div>
-  
-  <script src="popup.js"></script>
-</body>
+
+    <script src="popup.js"></script>
+  </body>
 </html>

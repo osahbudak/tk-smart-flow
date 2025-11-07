@@ -22,6 +22,9 @@
 - 🆕 **Otomatik Pencere Kapanma**: İşlem sonrası popup penceresi temizlenir
 - 🆕 **Fallback Tab ID Sistemi**: `sender.tab` undefined olsa bile çalışır
 - 🆕 **10 Deneme Mekanizması**: Yavaş açılan popup'lar için retry sistemi
+- 🆕 **Özelleştirilebilir Yenileme Aralığı**: Kullanıcı 1-30 dakika arası bekleme süresi ayarlayabilir
+- 🆕 **Gerçek Zamanlı Dakika Gösterimi**: Girilen saniye değeri anlık olarak dakika formatında gösterilir
+- 🆕 **PR Kodu Loglama**: Her PR işleminde kod bilgisi loglara eklenir
 
 ---
 
@@ -69,6 +72,16 @@ Yöntem 2: Console'da TK_SmartFlow.startAutoRun()
 | 🚀 **Tek Çalıştır**   | Auto-run olmadan tek seferlik tarama |
 | ⚡ **Hızlı Tarama**   | Rate limit'siz acil tarama           |
 | 📊 **Sistem Analizi** | DOM ve sistem durumu raporu          |
+
+#### **⚙️ Ayarlar**
+
+**Sayfa Yenileme Aralığı**
+- Tüm PR'ler işlendikten sonra yeni PR kontrolü için bekleme süresi
+- **Minimum**: 60 saniye (1 dakika)
+- **Maksimum**: 1800 saniye (30 dakika)
+- **Varsayılan**: 300 saniye (5 dakika)
+- **Artış**: 15 saniye adımlarla
+- Girilen değer otomatik olarak dakika formatında gösterilir (örn: "5 dk 15 sn")
 
 ### Console API (Gelişmiş Kullanım)
 

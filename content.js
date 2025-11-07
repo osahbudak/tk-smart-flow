@@ -7,7 +7,7 @@
 // =====================
 const CONFIG = {
   MAX_RECORDS: 15, // Sadece 15 PR kontrol et - zaten en güncele göre sıralı
-  WAIT_TIMEOUT: 150000, // 2.5 minutes
+  WAIT_TIMEOUT: 150000, // 2.5 minutes (default - storage'dan okunacak)
   RATE_LIMIT_DELAY: 15000, // 15 seconds
   AUTO_RUN_INTERVAL: 45000, // 45 seconds
   INITIAL_DELAY: 3000,
@@ -16,6 +16,38 @@ const CONFIG = {
   PAGE_CHANGE_TIMEOUT: 30000,
   TABLE_LOAD_TIMEOUT: 20000,
 };
+
+// Dynamic config - storage'dan yüklenir
+let dynamicConfig = {
+  waitTimeout: CONFIG.WAIT_TIMEOUT,
+};
+
+// Storage'dan ayarları yükle
+chrome.storage.local.get(["waitTimeout"], (result) => {
+  if (result.waitTimeout) {
+    dynamicConfig.waitTimeout = result.waitTimeout * 1000; // saniye -> milisaniye
+    console.log(
+      "⚙️ Sayfa yenileme aralığı storage'dan yüklendi:",
+      result.waitTimeout,
+      "saniye"
+    );
+  }
+});
+
+// Storage değişikliklerini dinle
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "local" && changes.waitTimeout) {
+    dynamicConfig.waitTimeout = changes.waitTimeout.newValue * 1000;
+    console.log(
+      "⚙️ Sayfa yenileme aralığı güncellendi:",
+      changes.waitTimeout.newValue,
+      "saniye"
+    );
+    logMessage(
+      `⚙️ Sayfa yenileme aralığı ${changes.waitTimeout.newValue} saniye olarak güncellendi`
+    );
+  }
+});
 
 const PAGE_TYPES = {
   LOGIN: "login",
@@ -221,11 +253,14 @@ function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
   console.log("📍 Popup URL:", location.href);
   console.log("📍 Origin Tab ID:", request.originTabId);
   console.log("📍 Popup Window ID:", request.popupWindowId);
+  console.log("📍 PR Kodu:", request.prCode);
 
   // Popup sayfasında "Müdahaleye Başla" butonunu bul ve tıkla
   (async () => {
     try {
-      logMessage("🪟 Popup pencerede 'Müdahaleye Başla' butonu aranıyor...");
+      logMessage(
+        `🪟 ${request.prCode} - Popup pencerede 'Müdahaleye Başla' butonu aranıyor...`
+      );
 
       // Sayfa tam yüklenene kadar bekle
       await waitFor(3000);
@@ -233,7 +268,9 @@ function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
       const success = await clickInterventionButtonInPopup();
 
       if (success) {
-        logMessage("✅ Popup'ta 'Müdahaleye Başla' butonuna basıldı");
+        logMessage(
+          `✅ ${request.prCode} - Popup'ta 'Müdahaleye Başla' butonuna basıldı`
+        );
 
         // PR sayacını artır
         chrome.runtime.sendMessage({ action: "incrementProcessed" });
@@ -262,7 +299,9 @@ function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
 
         sendResponse({ success: true, message: "Popup işlendi ve kapatıldı" });
       } else {
-        logMessage("❌ Popup'ta 'Müdahaleye Başla' butonu bulunamadı");
+        logMessage(
+          `❌ ${request.prCode} - Popup'ta 'Müdahaleye Başla' butonu bulunamadı`
+        );
 
         // Popup'u yine de kapat
         chrome.windows.remove(request.popupWindowId);
@@ -274,7 +313,9 @@ function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
       }
     } catch (error) {
       console.error("❌ Popup işleme hatası:", error);
-      logMessage(`❌ Popup işleme hatası: ${error.message}`);
+      logMessage(
+        `❌ ${request.prCode} - Popup işleme hatası: ${error.message}`
+      );
 
       // Hata olsa bile popup'u kapat
       try {
@@ -409,9 +450,18 @@ async function handleUnknownPageFlow() {
 }
 
 async function waitForNextCycle() {
-  logMessage("⏰ PR tarama tamamlandı, 2,5 dakika bekleyip sayfa yenilenecek");
+  const totalSeconds = dynamicConfig.waitTimeout / 1000;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.floor(totalSeconds % 60);
 
-  const totalSeconds = CONFIG.WAIT_TIMEOUT / 1000;
+  let timeText;
+  if (seconds === 0) {
+    timeText = `${minutes} dakika`;
+  } else {
+    timeText = `${minutes} dk ${seconds} sn`;
+  }
+
+  logMessage(`⏰ PR tarama tamamlandı, ${timeText} bekleyip sayfa yenilenecek`);
   for (let i = totalSeconds; i > 0; i--) {
     // Otomasyon durduruldu mu kontrol et
     if (!autoRunEnabled) {
@@ -741,7 +791,6 @@ async function scanForPRs() {
       const assigned = row.querySelector("td:nth-child(8) span");
 
       if (assigned && assigned.textContent !== "") {
-        // TODO burası böyle kalsın dokunma
         processedSkipped++;
         LOG(`⏭️ ${prCode} zaten işlenmiş, atlanıyor`);
         continue;
@@ -820,10 +869,21 @@ async function processFoundPRs(foundPRs) {
     logMessage("⏹️ Otomasyon durduruldu, sayfa yenileme atlandı");
     return;
   }
-  // Tüm PR'lar tamamlandıktan sonra 2,5 dakika bekle ve sayfayı yenile
-  logMessage("✅ Tüm PR'ler tamamlandı, 2,5 dakika bekleniyor...");
+  // Tüm PR'lar tamamlandıktan sonra bekle ve sayfayı yenile
+  const totalWaitTime = dynamicConfig.waitTimeout;
+  const totalSeconds = totalWaitTime / 1000;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+
+  let timeText;
+  if (seconds === 0) {
+    timeText = `${minutes} dakika`;
+  } else {
+    timeText = `${minutes} dk ${seconds} sn`;
+  }
+
+  logMessage(`✅ Tüm PR'ler tamamlandı, ${timeText} bekleniyor...`);
   // Beklemeyi küçük parçalara böl ki dur sinyali kontrol edilebilsin
-  const totalWaitTime = CONFIG.WAIT_TIMEOUT;
   const checkInterval = 5000; // Her 5 saniyede kontrol et
   const iterations = Math.ceil(totalWaitTime / checkInterval);
   for (let i = 0; i < iterations; i++) {
@@ -864,6 +924,7 @@ async function processSinglePR(pr, index, total) {
     await chrome.runtime.sendMessage({
       action: "waitForPopup",
       originTabId: currentTabId,
+      prCode: pr.code,
     });
   } catch (e) {
     console.error("❌ waitForPopup mesajı gönderilemedi:", e);

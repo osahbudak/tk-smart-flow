@@ -15,6 +15,7 @@ const CONFIG = {
 let intervalId = null;
 let waitingForPopup = false;
 let popupOriginTabId = null;
+let currentPRCode = null;
 
 // =====================
 // Message Handlers
@@ -117,8 +118,10 @@ function handleIncrementProcessedRequest(request, sendResponse) {
 
 function handleWaitForPopupRequest(request, sendResponse) {
   console.log("🪟 Popup pencere bekleme modu aktif edildi");
+  console.log("📝 PR Kodu:", request.prCode);
   waitingForPopup = true;
   popupOriginTabId = request.originTabId;
+  currentPRCode = request.prCode;
 
   // 30 saniye timeout - popup açılmazsa kilidi kaldır
   setTimeout(() => {
@@ -126,6 +129,7 @@ function handleWaitForPopupRequest(request, sendResponse) {
       console.log("⏱️ Popup pencere timeout - kilit kaldırıldı");
       waitingForPopup = false;
       popupOriginTabId = null;
+      currentPRCode = null;
     }
   }, 30000);
 
@@ -217,11 +221,15 @@ function doHyperFlowTick() {
     .then((tab) => {
       if (tab) {
         activateAndRunTab(tab, "odaklı pencerede");
-      } else {
-        return findTabInAllWindows();
+        return; // Promise chain'i sonlandır
       }
+      return findTabInAllWindows();
     })
     .then((tab) => {
+      if (tab === undefined) {
+        // İlk then'de tab bulundu ve return edildi
+        return;
+      }
       if (tab) {
         activateAndRunTab(tab, "global");
       } else {
@@ -436,6 +444,7 @@ chrome.windows.onCreated.addListener(async (window) => {
         action: "clickInterventionButtonInPopup",
         originTabId: popupOriginTabId,
         popupWindowId: window.id,
+        prCode: currentPRCode,
       },
       (response) => {
         if (chrome.runtime.lastError) {
