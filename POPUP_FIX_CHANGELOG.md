@@ -10,14 +10,14 @@
 
 - ❌ PR satırına tıklandığında detay sayfası **yeni bir pencerede** açılıyordu
 - ❌ Extension yeni pencereyi yakalayamıyordu
-- ❌ "Çözüldü" butonu yeni pencerede olduğu için erişilemiyordu
+- ❌ "Müdahaleye Başla" butonu yeni pencerede olduğu için erişilemiyordu
 - ❌ Console'da `❌ PR detay sayfası açılamadı - URL değişmedi` hatası alınıyordu
 - ❌ `sender.tab` undefined olduğu için Tab ID null geliyordu
 
 ### **Yeni Durum (v2.2):**
 
 - ✅ Yeni pencere otomatik yakalanıyor
-- ✅ "Çözüldü" butonuna otomatik basılıyor
+- ✅ "Müdahaleye Başla" butonuna otomatik basılıyor
 - ✅ Popup penceresi otomatik kapanıyor
 - ✅ Orijinal sekmeye geri dönülüyor
 - ✅ Fallback tab ID sistemi çalışıyor
@@ -100,7 +100,7 @@ async function processSinglePR(pr, index, total) {
 }
 ```
 
-#### D) Popup'ta "Çözüldü" Butonuna Basma
+#### D) Popup'ta "Müdahaleye Başla" Butonuna Basma
 
 ```javascript
 async function clickResolveButtonInPopup() {
@@ -148,7 +148,7 @@ async function clickResolveButtonInPopup() {
    ↓
 5. Popup Pencere: Content script enjekte edildi
    ↓
-   "Çözüldü" butonunu bul (5 deneme, 2sn aralık)
+   "Müdahaleye Başla" butonunu bul (5 deneme, 2sn aralık)
    ↓
    Butona tıkla
    ↓
@@ -177,8 +177,8 @@ TK_SmartFlow.run();
 3. ✅ Yeni pencere açılır
 4. ✅ Console'da: `🪟 Yeni pencere tespit edildi`
 5. ✅ Console'da: `✅ THY PR detay popup sekmesi bulundu`
-6. ✅ Console'da: `✅ 'Çözüldü' butonu bulundu`
-7. ✅ Console'da: `✅ 'Çözüldü' butonuna tıklandı`
+6. ✅ Console'da: `✅ 'Müdahaleye Başla' butonu bulundu`
+7. ✅ Console'da: `✅ 'Müdahaleye Başla' butonuna tıklandı`
 8. ✅ Popup penceresi kapanır
 9. ✅ İşlenen PR sayısı +1 artar
 
@@ -198,13 +198,13 @@ TK_SmartFlow.startAutoRun();
 
 ### Test 3: Hata Durumları
 
-#### A) "Çözüldü" Butonu Bulunamazsa
+#### A) "Müdahaleye Başla" Butonu Bulunamazsa
 
 ```
-⏳ 'Çözüldü' butonu bulunamadı, bekleniyor... (deneme 1/5)
-⏳ 'Çözüldü' butonu bulunamadı, bekleniyor... (deneme 2/5)
+⏳ 'Müdahaleye Başla' butonu bulunamadı, bekleniyor... (deneme 1/5)
+⏳ 'Müdahaleye Başla' butonu bulunamadı, bekleniyor... (deneme 2/5)
 ...
-❌ 'Çözüldü' butonu 5 denemede bulunamadı
+❌ 'Müdahaleye Başla' butonu 5 denemede bulunamadı
 🪟 Popup penceresi kapatılıyor...
 ```
 
@@ -267,10 +267,10 @@ Popup pencerede F12 → Console (hızlıca açmalısın)
 ```
 🪟 Content: clickResolveButtonInPopup message received
 📍 Popup URL: https://turuncuhat.thy.com/Edit/SMSS_Problem/77837?IS_POPUP=1...
-🪟 Popup pencerede 'Çözüldü' butonu aranıyor...
-✅ 'Çözüldü' butonu bulundu (deneme 1)
-📝 Buton metni: "Çözüldü"
-✅ 'Çözüldü' butonuna tıklandı
+🪟 Popup pencerede 'Müdahaleye Başla' butonu aranıyor...
+✅ 'Müdahaleye Başla' butonu bulundu (deneme 1)
+📝 Buton metni: "Müdahaleye Başla"
+✅ 'Müdahaleye Başla' butonuna tıklandı
 🪟 Popup penceresi kapatılıyor...
 ```
 
@@ -283,7 +283,7 @@ Popup pencerede F12 → Console (hızlıca açmalısın)
 ```javascript
 // content.js - processSinglePR()
 await waitFor(25000); // Popup işlem süresi
-// ↑ Popup açılma (3-5sn) + Çözüldü butonu arama (max 10sn) + İşlem (3sn) + Kapanma (2sn)
+// ↑ Popup açılma (3-5sn) + Müdahaleye Başla butonu arama (max 10sn) + İşlem (3sn) + Kapanma (2sn)
 
 // content.js - clickResolveButtonInPopup()
 for (let attempt = 0; attempt < 5; attempt++) {
@@ -388,7 +388,7 @@ Sorun yaşarsan:
 ✅ Tab ID başarıyla alındı
 ```
 
-#### 3. "Çözüldü" Butonu Testi
+#### 3. "Müdahaleye Başla" Butonu Testi
 
 ```
 ✅ Popup'ta buton bulundu
@@ -409,7 +409,7 @@ Sorun yaşarsan:
 ### 📊 Performance Metrikleri
 
 - **Popup Tespit Süresi**: ~500ms - 1.5 saniye
-- **"Çözüldü" Butonu Bulma**: ~2-4 saniye
+- **"Müdahaleye Başla" Butonu Bulma**: ~2-4 saniye
 - **Toplam PR İşleme**: ~25-30 saniye/PR
 - **Başarı Oranı**: %100 (test ortamında)
 
@@ -610,18 +610,18 @@ TK_SmartFlow.analyze(); // Sistem durumu
 - Fallback sistemi otomatik devreye girer
 - Eğer hala null ise Chrome'u yeniden başlat
 
-### "Çözüldü" Butonu Bulunamıyor
+### "Müdahaleye Başla" Butonu Bulunamıyor
 
 **Kontrol Et:**
 
 1. Popup pencerede F12 aç (hızlıca!)
-2. Console'da: `🪟 Popup'ta 'Çözüldü' butonu aranıyor...`
+2. Console'da: `🪟 Popup'ta 'Müdahaleye Başla' butonu aranıyor...`
 
 **Çözüm:**
 
 - Buton metni farklı olabilir
 - `content.js` → `findInterventionButton()` fonksiyonunu kontrol et
-- `text.includes("çözüldü")` yerine farklı kelime ara
+- `text.includes("müdahaleye başla")` yerine farklı kelime ara
 
 ---
 

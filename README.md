@@ -18,7 +18,7 @@
 ### 🪟 v2.2 Yeni Özellikler
 
 - 🆕 **Popup Pencere Yakalama**: `IS_POPUP=1` parametreli pencereler otomatik tespit edilir
-- 🆕 **Çözüldü Butonu Otomasyonu**: Popup'ta "Çözüldü" butonuna otomatik tıklar
+- 🆕 **Müdahaleye Başla Butonu Otomasyonu**: Popup'ta "Müdahaleye Başla" butonuna otomatik tıklar
 - 🆕 **Otomatik Pencere Kapanma**: İşlem sonrası popup penceresi temizlenir
 - 🆕 **Fallback Tab ID Sistemi**: `sender.tab` undefined olsa bile çalışır
 - 🆕 **10 Deneme Mekanizması**: Yavaş açılan popup'lar için retry sistemi
@@ -115,7 +115,7 @@ TK_SmartFlow.debugSort();
    - PR satırına tıkla
    - Yeni pencere açılır (IS_POPUP=1)
    - Background pencereyi yakalar
-   - "Çözüldü" butonuna bas
+   - "Müdahaleye Başla" butonuna bas
    - Pencereyi kapat
    - Sonraki PR'a geç
    ↓
@@ -279,7 +279,7 @@ tk-smart-flow/
 ### v2.2 (Mevcut) - Popup Pencere Desteği
 
 - 🆕 Yeni pencerede açılan PR'ları otomatik yakalama
-- 🆕 Popup'ta "Çözüldü" butonuna otomatik tıklama
+- 🆕 Popup'ta "Müdahaleye Başla" butonuna otomatik tıklama
 - 🆕 Fallback tab ID sistemi
 - 🆕 10 deneme mekanizması
 - 🐛 sender.tab undefined sorunu çözüldü
