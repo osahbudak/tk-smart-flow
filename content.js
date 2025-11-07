@@ -275,36 +275,16 @@ function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
         // PR sayacını artır
         chrome.runtime.sendMessage({ action: "incrementProcessed" });
 
-        // 3 saniye bekle (işlem tamamlansın)
-        await waitFor(3000);
+        // Popup otomatik kapanacak (site kendisi kapatır)
+        // 5 saniye bekle (popup kapanana kadar)
+        await waitFor(5000);
 
-        // Popup penceresini kapat
-        logMessage("🪟 Popup penceresi kapatılıyor...");
-        chrome.windows.remove(request.popupWindowId, () => {
-          if (chrome.runtime.lastError) {
-            console.error(
-              "❌ Popup kapatma hatası:",
-              chrome.runtime.lastError.message
-            );
-          } else {
-            console.log("✅ Popup penceresi kapatıldı");
-          }
-        });
-
-        // Orijinal sekmeye geri dön mesajı gönder
-        chrome.tabs.sendMessage(request.originTabId, {
-          action: "popupProcessed",
-          success: true,
-        });
-
-        sendResponse({ success: true, message: "Popup işlendi ve kapatıldı" });
+        logMessage(`✅ ${request.prCode} - Popup işlemi tamamlandı`);
+        sendResponse({ success: true, message: "Popup işlendi" });
       } else {
         logMessage(
           `❌ ${request.prCode} - Popup'ta 'Müdahaleye Başla' butonu bulunamadı`
         );
-
-        // Popup'u yine de kapat
-        chrome.windows.remove(request.popupWindowId);
 
         sendResponse({
           success: false,
@@ -316,11 +296,6 @@ function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
       logMessage(
         `❌ ${request.prCode} - Popup işleme hatası: ${error.message}`
       );
-
-      // Hata olsa bile popup'u kapat
-      try {
-        chrome.windows.remove(request.popupWindowId);
-      } catch {}
 
       sendResponse({ success: false, message: error.message });
     }
@@ -936,8 +911,9 @@ async function processSinglePR(pr, index, total) {
 
   // Yeni pencere açılmasını ve işlenmesini bekle
   // Background + popup content script bu işi halledecek
+  // Popup otomatik kapanacak (site kendisi kapatır)
   logMessage(`⏳ ${pr.code} için popup penceresi işleniyor...`);
-  await waitFor(25000); // Popup açılma + işlem + kapanma süresi
+  await waitFor(30000); // Popup açılma + işlem + otomatik kapanma süresi
 
   logMessage(`✅ ${pr.code} popup işlemi tamamlandı`);
 }
