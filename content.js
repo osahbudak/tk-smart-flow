@@ -83,7 +83,7 @@ const messageHandlers = {
   runOnce: handleRunOnceRequest,
   skipWait: handleSkipWaitRequest,
   analyze: handleAnalyzeRequest,
-  clickResolveButtonInPopup: handleClickResolveButtonInPopupRequest,
+  clickInterventionButtonInPopup: handleClickInterventionButtonInPopupRequest,
   popupProcessed: handlePopupProcessedRequest,
 };
 
@@ -216,8 +216,8 @@ function handleAnalyzeRequest(request, sendResponse) {
   return true;
 }
 
-function handleClickResolveButtonInPopupRequest(request, sendResponse) {
-  console.log("🪟 Content: clickResolveButtonInPopup message received");
+function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
+  console.log("🪟 Content: clickInterventionButtonInPopup message received");
   console.log("📍 Popup URL:", location.href);
   console.log("📍 Origin Tab ID:", request.originTabId);
   console.log("📍 Popup Window ID:", request.popupWindowId);
@@ -230,7 +230,7 @@ function handleClickResolveButtonInPopupRequest(request, sendResponse) {
       // Sayfa tam yüklenene kadar bekle
       await waitFor(3000);
 
-      const success = await clickResolveButtonInPopup();
+      const success = await clickInterventionButtonInPopup();
 
       if (success) {
         logMessage("✅ Popup'ta 'Müdahaleye Başla' butonuna basıldı");

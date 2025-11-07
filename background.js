@@ -433,7 +433,7 @@ chrome.windows.onCreated.addListener(async (window) => {
     chrome.tabs.sendMessage(
       thyTab.id,
       {
-        action: "clickResolveButtonInPopup",
+        action: "clickInterventionButtonInPopup",
         originTabId: popupOriginTabId,
         popupWindowId: window.id,
       },
