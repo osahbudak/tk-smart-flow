@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "TK SmartFlow",
-  "version": "2.0",
+  "version": "2.2",
   "description": "🚀 Turkish Technology - Professional PR Intervention System for THY Operations",
   "permissions": [
     "activeTab",
     "storage",
     "scripting",
-    "tabs"
+    "tabs",
+    "windows"
   ],
   "host_permissions": [
     "https://turuncuhat.thy.com/*",

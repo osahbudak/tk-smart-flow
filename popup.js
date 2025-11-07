@@ -56,7 +56,7 @@ function initializePopup() {
   
   // Show initial message
   setTimeout(() => {
-    addLog('TK SmartFlow v2.1 hazır');
+    addLog('TK SmartFlow v2.2 hazır - Popup desteği aktif');
   }, 500);
 }
 

@@ -1,59 +1,325 @@
-# 🚀 TK SmartFlow - THY PR Otomasyon
+# 🚀 TK SmartFlow - THY PR Otomasyon Sistemi
 
-PR kayıtlarını otomatik işleyen Chrome extension'ı.
+**v2.2** - Profesyonel PR kayıt işleme otomasyonu. Yeni pencerede açılan PR detaylarını otomatik yakalar ve işler.
+
+---
+
+## ✨ Özellikler
+
+### 🎯 Temel Özellikler
+
+- ✅ **Otomatik PR Tarama**: En yeni 15 PR'ı sıralı şekilde işler
+- ✅ **Yeni Pencere Desteği**: Popup'larda açılan PR detaylarını otomatik yakalar
+- ✅ **Akıllı Sıralama**: PR'ları oluşturma tarihine göre DESC sıralar
+- ✅ **Zaten İşlenmiş Kontrolü**: Duplicate işlemleri önler
+- ✅ **10 Dakika Güvenlik Döngüsü**: Background'da sürekli çalışır
+- ✅ **Rate Limit Koruması**: 15 saniye bekleme ile güvenli işlem
+
+### 🪟 v2.2 Yeni Özellikler
+
+- 🆕 **Popup Pencere Yakalama**: `IS_POPUP=1` parametreli pencereler otomatik tespit edilir
+- 🆕 **Çözüldü Butonu Otomasyonu**: Popup'ta "Çözüldü" butonuna otomatik tıklar
+- 🆕 **Otomatik Pencere Kapanma**: İşlem sonrası popup penceresi temizlenir
+- 🆕 **Fallback Tab ID Sistemi**: `sender.tab` undefined olsa bile çalışır
+- 🆕 **10 Deneme Mekanizması**: Yavaş açılan popup'lar için retry sistemi
+
+---
 
 ## 🛠️ Kurulum
 
-1. **Chrome Extensions**: `chrome://extensions/` → **Geliştirici modu** açın
-2. **Load unpacked**: Proje klasörünü seçin
-3. **THY'ye giriş**: `https://turuncuhat.thy.com/` → **Sadece Bir Defa**
-4. **Extension'ı başlat**: Toolbar'dan TK SmartFlow → **Otomasyonu Başlat**
+### 1. Extension Yükleme
 
-## 🎮 Kullanım
-
-### Ana Kontroller
-- **Başlat/Durdur**: Otomatik mod (2.5dk döngü)
-- **Manuel Kontroller**: Toggle ile açılır
-
-### Hızlı İşlemler
-- **▶️ Tek Çalıştır**: Otomasyonsuz tek seferlik
-- **⚡ Hızlı Tarama**: Rate limit olmadan
-- **📊 Sistem Durumu**: Sayfa ve sistem analizi
-
-### Console (Geliştirici)
-```javascript
-// Sistem durumunu analiz et
-TK_SmartFlow.analyze()
-
-// Tek seferlik çalıştır
-TK_SmartFlow.run()
-
-// Auto-run modunu başlat
-TK_SmartFlow.startAutoRun()
-
-// Auto-run modunu durdur
-TK_SmartFlow.stopAutoRun()
-
-// Rate limit'i atlayarak PR taraması yap
-TK_SmartFlow.skipWait()
+```bash
+1. Chrome'da: chrome://extensions/
+2. "Geliştirici modu" açın (sağ üst toggle)
+3. "Paketlenmemiş öğe yükle" → Proje klasörünü seçin
+4. Extension yüklendi! ✅
 ```
 
-## 🔧 Sorun Giderme
+### 2. THY'ye İlk Giriş
 
-- **Extension çalışmıyor**: `chrome://extensions/` kontrol → Yeniden yükle
-- **PR işlenmiyor**: THY login kontrolü → Görev listesi sayfası
-- **Debug**: F12 → Console → `[TK SmartFlow]` logları
+```bash
+1. https://turuncuhat.thy.com/ adresine gidin
+2. Kurumsal hesabınızla giriş yapın (tek seferlik)
+3. Extension artık hazır!
+```
 
-## ⚙️ Konfigürasyon
+### 3. Otomasyonu Başlatma
 
-```javascript
-// background.js
-INTERVAL_TIMEOUT: 600000  // 10 dakika
-
-// content.js  
-WAIT_TIMEOUT: 150000      // 2.5 dakika
-RATE_LIMIT_DELAY: 15000   // 15 saniye
+```bash
+Yöntem 1: Extension popup'ından "Otomasyonu Başlat"
+Yöntem 2: Console'da TK_SmartFlow.startAutoRun()
 ```
 
 ---
-**TK SmartFlow v2.1** 
+
+## 🎮 Kullanım Kılavuzu
+
+### Ana Kontrol Paneli
+
+#### **Otomasyonu Başlat/Durdur**
+
+- **Başlat**: 10 dakikalık döngü başlar, sürekli PR tarar
+- **Durdur**: Güvenli şekilde tüm işlemleri durdurur
+
+#### **Hızlı İşlemler**
+
+| Buton                 | Açıklama                             |
+| --------------------- | ------------------------------------ |
+| 🚀 **Tek Çalıştır**   | Auto-run olmadan tek seferlik tarama |
+| ⚡ **Hızlı Tarama**   | Rate limit'siz acil tarama           |
+| 📊 **Sistem Analizi** | DOM ve sistem durumu raporu          |
+
+### Console API (Gelişmiş Kullanım)
+
+```javascript
+// Sistem durumu analizi
+TK_SmartFlow.analyze();
+// Çıktı: Sayfa türü, PR sayısı, işlem durumu, auto-run durumu
+
+// Tek seferlik çalıştırma
+TK_SmartFlow.run();
+
+// Auto-run modunu başlat
+TK_SmartFlow.startAutoRun();
+
+// Auto-run modunu durdur
+TK_SmartFlow.stopAutoRun();
+
+// Rate limit'siz hızlı tarama
+TK_SmartFlow.skipWait();
+
+// Sıralama testi
+TK_SmartFlow.testSort();
+
+// Sıralama debug
+TK_SmartFlow.debugSort();
+```
+
+---
+
+## 🔄 İş Akışı
+
+```
+1. Background (10dk döngü)
+   ↓
+2. THY sekmesi bulunur/açılır
+   ↓
+3. Ana sayfa → Görev listesi
+   ↓
+4. Tablo DESC sıralama (en yeni üstte)
+   ↓
+5. İlk 15 PR taranır
+   ↓
+6. Her PR için:
+   - PR satırına tıkla
+   - Yeni pencere açılır (IS_POPUP=1)
+   - Background pencereyi yakalar
+   - "Çözüldü" butonuna bas
+   - Pencereyi kapat
+   - Sonraki PR'a geç
+   ↓
+7. 2.5 dakika bekle
+   ↓
+8. Sayfa yenile ve tekrarla
+```
+
+---
+
+## 🔧 Sorun Giderme
+
+### Extension Çalışmıyor
+
+```bash
+1. chrome://extensions/ → TK SmartFlow → Yeniden Yükle
+2. THY sayfasını yenile (F5)
+3. Extension popup'ını aç ve "Otomasyonu Başlat"
+```
+
+### PR İşlenmiyor
+
+```bash
+1. THY'ye giriş yaptığınızdan emin olun
+2. Görev listesi sayfasında olduğunuzdan emin olun
+3. F12 → Console → [TK SmartFlow] loglarını kontrol edin
+4. Background console'u kontrol edin:
+   chrome://extensions/ → "Inspect views: service worker"
+```
+
+### Popup Yakalanmıyor
+
+```bash
+1. Background console'da şu logları arayın:
+   - "🪟 Yeni pencere tespit edildi"
+   - "✅ THY PR detay popup sekmesi bulundu"
+
+2. Eğer "⚠️ 10 denemede THY PR popup bulunamadı" görüyorsan:
+   - Popup açılma süresi çok uzun olabilir
+   - content.js'te waitFor(25000) değerini artır
+```
+
+### Tab ID null Hatası
+
+```bash
+1. Background console'da şunu ara:
+   "📍 getCurrentTabId request - sender:"
+
+2. Eğer sender.tab undefined ise:
+   - Fallback sistemi devreye girer
+   - THY sekmelerinden ilki kullanılır
+
+3. Hala null ise:
+   - Extension'ı yeniden yükle
+   - Chrome'u yeniden başlat
+```
+
+---
+
+## ⚙️ Konfigürasyon
+
+### Timing Ayarları
+
+```javascript
+// background.js
+CONFIG = {
+  INTERVAL_TIMEOUT: 600000, // 10 dakika (background döngü)
+  RETRY_DELAY: 2000, // 2 saniye (retry bekleme)
+  TAB_LOAD_TIMEOUT: 20000, // 20 saniye (sekme yükleme)
+};
+
+// content.js
+CONFIG = {
+  MAX_RECORDS: 15, // Tek seferde işlenecek PR sayısı
+  WAIT_TIMEOUT: 150000, // 2.5 dakika (PR işleme sonrası)
+  RATE_LIMIT_DELAY: 15000, // 15 saniye (güvenlik bekleme)
+  AUTO_RUN_INTERVAL: 45000, // 45 saniye (content kontrol)
+  PROCESSING_DELAY: 2000, // 2 saniye (PR arası bekleme)
+};
+```
+
+### Popup Yakalama Ayarları
+
+```javascript
+// background.js - chrome.windows.onCreated
+for (let attempt = 0; attempt < 10; attempt++) {
+  await waitFor(500); // 500ms x 10 = 5 saniye max
+  // IS_POPUP=1 parametresi kontrol edilir
+}
+
+// content.js - processSinglePR
+await waitFor(25000); // Popup açılma + işlem + kapanma süresi
+```
+
+---
+
+## 📊 İstatistikler
+
+- **İşlenen PR Sayısı**: Extension popup'ında görüntülenir
+- **Çift tıklama ile sıfırlama**: Sayaç üzerine çift tıkla
+- **Storage**: `chrome.storage.local` ile kalıcı
+
+---
+
+## 🐛 Debug Modu
+
+### Content Script Logları (F12 → Console)
+
+```
+[TK SmartFlow][11:23:51] 🚀 SmartFlow başlatıldı
+[TK SmartFlow][11:23:51] 📍 Sayfa türü: tasks
+[TK SmartFlow][11:23:51] ✅ Sıralama işlemi başarılı
+[TK SmartFlow][11:23:51] ⚡ 15 PR işlenecek
+[TK SmartFlow][11:23:53] 🪟 Popup bekleme modu aktif ediliyor (Tab ID: 123)
+[TK SmartFlow][11:23:53] 👆 PR-000762492025 satırına tıklanıyor
+```
+
+### Background Script Logları (chrome://extensions/)
+
+```
+🪟 Yeni pencere tespit edildi: 1980400997
+🔍 Deneme 1: 1 sekme bulundu
+📍 Sekme URL'leri: ["https://turuncuhat.thy.com/Edit/SMSS_Problem/77928?IS_POPUP=1..."]
+✅ THY PR detay popup sekmesi bulundu (deneme 1): 789
+⏳ Sekme 789 yüklenmesi bekleniyor...
+✅ Sekme 789 yüklendi
+✅ Popup sekmesine mesaj gönderildi
+```
+
+---
+
+## 📦 Dosya Yapısı
+
+```
+tk-smart-flow/
+├── manifest.json              # Extension konfigürasyonu
+├── background.js              # Service worker (pencere yönetimi)
+├── content.js                 # Ana otomasyon mantığı
+├── popup.html                 # UI arayüzü
+├── popup.js                   # Popup kontrolcüsü
+├── icons/
+│   └── icon.svg              # Extension ikonu
+├── README.md                  # Bu dosya
+└── POPUP_FIX_CHANGELOG.md    # v2.2 teknik detaylar
+```
+
+---
+
+## 🔐 Güvenlik
+
+- ✅ Sadece `turuncuhat.thy.com` ve `auth.thy.com` erişimi
+- ✅ Çift çalışma kilitleri (`isRunning`, `processingPRTasks`)
+- ✅ Timeout korumaları (30 saniye max)
+- ✅ Rate limit koruması (15 saniye)
+- ✅ Hata yakalama ve temizleme
+
+---
+
+## 📝 Versiyon Geçmişi
+
+### v2.2 (Mevcut) - Popup Pencere Desteği
+
+- 🆕 Yeni pencerede açılan PR'ları otomatik yakalama
+- 🆕 Popup'ta "Çözüldü" butonuna otomatik tıklama
+- 🆕 Fallback tab ID sistemi
+- 🆕 10 deneme mekanizması
+- 🐛 sender.tab undefined sorunu çözüldü
+
+### v2.1 - Optimizasyon
+
+- ⚡ Sıralama sistemi iyileştirildi
+- ⚡ Rate limit koruması eklendi
+- 🐛 Çoklu tetikleme önlendi
+
+### v2.0 - İlk Sürüm
+
+- 🎉 Temel otomasyon sistemi
+- 🎉 Auto-run modu
+- 🎉 Console API
+
+---
+
+## 🤝 Katkıda Bulunma
+
+Bu proje THY iç kullanımı için geliştirilmiştir. Öneriler için lütfen iletişime geçin.
+
+---
+
+## 📞 Destek
+
+**Sorun mu yaşıyorsun?**
+
+1. Console loglarını kontrol et (F12)
+2. Background console'u kontrol et (chrome://extensions/)
+3. Extension'ı yeniden yükle
+4. Chrome'u yeniden başlat
+
+**Hala çalışmıyor mu?**
+
+- `TK_SmartFlow.analyze()` çıktısını paylaş
+- Console loglarını paylaş
+- Background console loglarını paylaş
+
+---
+
+**TK SmartFlow v2.2** - Turkish Technology © 2025
+_Professional PR Intervention System for THY Operations_
