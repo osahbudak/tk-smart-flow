@@ -372,10 +372,9 @@ async function handlePageFlow(pageType) {
 }
 
 async function handleLoginFlow() {
-  logMessage("🔐 Login sayfası tespit edildi");
-  await handleLogin();
-  await waitFor(CONFIG.INITIAL_DELAY);
-  logMessage("✅ Login işlemi tamamlandı");
+  logMessage("🔐 Login sayfası tespit edildi - Otomasyon bu sayfada çalışmaz");
+  // Login sayfasında hiçbir işlem yapma
+  // Kullanıcı manuel login yapmalı
 }
 
 async function handleTasksFlow() {
