@@ -108,16 +108,19 @@ function handleStartClick() {
 
   chrome.storage.local.set({ isActive: true });
   chrome.runtime.sendMessage({ action: "start" }, function (response) {
+    if (chrome.runtime.lastError) {
+      console.error(
+        "❌ Start mesajı hatası:",
+        chrome.runtime.lastError.message
+      );
+    }
+
     setTimeout(() => {
       updateUI(true);
       addLog(
         "✅ Auto-run modu başlatıldı - 15sn rate limit + sürekli döngü",
         "success"
       );
-
-      setTimeout(() => {
-        window.close();
-      }, CONFIG.CLOSE_DELAY);
     }, CONFIG.LOADING_DELAY);
   });
 }
@@ -133,10 +136,6 @@ function handleStopClick() {
     setTimeout(() => {
       updateUI(false);
       addLog("⏹️ Auto-run modu durduruldu", "warning");
-
-      setTimeout(() => {
-        window.close();
-      }, CONFIG.CLOSE_DELAY);
     }, CONFIG.CLOSE_DELAY);
   });
 }

@@ -31,56 +31,69 @@ const messageHandlers = {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("Background received message:", request);
 
-  try {
-    const handler = messageHandlers[request.action];
-    if (handler) {
-      // getCurrentTabId için sender'ı kullan
-      if (request.action === "getCurrentTabId") {
-        console.log("📍 getCurrentTabId request - sender:", sender);
-        console.log("📍 sender.tab:", sender.tab);
-        console.log("📍 sender.url:", sender.url);
+  // getCurrentTabId için özel işlem
+  if (request.action === "getCurrentTabId") {
+    console.log("📍 getCurrentTabId request - sender:", sender);
+    console.log("📍 sender.tab:", sender.tab);
+    console.log("📍 sender.url:", sender.url);
 
-        if (sender.tab && sender.tab.id) {
-          console.log("✅ Tab ID bulundu:", sender.tab.id);
-          sendResponse({ success: true, tabId: sender.tab.id });
-        } else {
-          console.log("❌ sender.tab undefined! Fallback kullanılıyor...");
-          // Fallback: THY sekmelerini bul
-          chrome.tabs.query(
-            {
-              url: "https://turuncuhat.thy.com/*",
-              active: true,
-              currentWindow: true,
-            },
-            (tabs) => {
-              if (tabs && tabs.length > 0) {
-                console.log("✅ Fallback: Tab ID bulundu:", tabs[0].id);
-                sendResponse({ success: true, tabId: tabs[0].id });
-              } else {
-                console.log("❌ Fallback başarısız, null döndürülüyor");
-                sendResponse({ success: false, tabId: null });
-              }
-            }
-          );
-        }
-        return true;
-      }
-
-      handler(request, sendResponse);
+    if (sender.tab && sender.tab.id) {
+      console.log("✅ Tab ID bulundu:", sender.tab.id);
+      sendResponse({ success: true, tabId: sender.tab.id });
+      return false; // Senkron response
     } else {
-      sendResponse({ success: false, message: "Unknown action" });
+      console.log("❌ sender.tab undefined! Fallback kullanılıyor...");
+      // Fallback: THY sekmelerini bul
+      chrome.tabs.query(
+        {
+          url: "https://turuncuhat.thy.com/*",
+          active: true,
+          currentWindow: true,
+        },
+        (tabs) => {
+          if (tabs && tabs.length > 0) {
+            console.log("✅ Fallback: Tab ID bulundu:", tabs[0].id);
+            sendResponse({ success: true, tabId: tabs[0].id });
+          } else {
+            console.log("❌ Fallback başarısız, null döndürülüyor");
+            sendResponse({ success: false, tabId: null });
+          }
+        }
+      );
+      return true; // Async response
     }
-  } catch (error) {
-    console.error("Background script error:", error);
-    sendResponse({ success: false, message: error.message });
   }
 
-  return true; // Always return true to indicate async response
+  // Diğer handler'lar
+  const handler = messageHandlers[request.action];
+  if (handler) {
+    try {
+      const result = handler(request, sendResponse);
+      // Handler async ise true döner
+      return result === true;
+    } catch (error) {
+      console.error("Handler error:", error);
+      sendResponse({ success: false, message: error.message });
+      return false;
+    }
+  } else {
+    sendResponse({ success: false, message: "Unknown action" });
+    return false;
+  }
 });
 
 function handleStartRequest(request, sendResponse) {
-  startHyperFlow();
-  sendResponse({ success: true, message: "Auto-run mode started" });
+  // Async işlem için setTimeout kullan
+  setTimeout(() => {
+    try {
+      startHyperFlow();
+      sendResponse({ success: true, message: "Auto-run mode started" });
+    } catch (error) {
+      console.error("❌ Start hatası:", error);
+      sendResponse({ success: false, message: error.message });
+    }
+  }, 0);
+  return true; // Async response
 }
 
 function handleStopRequest(request, sendResponse) {
@@ -91,9 +104,10 @@ function handleStopRequest(request, sendResponse) {
     tabs.forEach((tab) => {
       sendMessageToTab(tab.id, { action: "stopAutoRun" });
     });
+    // Callback içinde sendResponse çağır
+    sendResponse({ success: true, message: "Auto-run mode stopped" });
   });
-
-  sendResponse({ success: true, message: "Auto-run mode stopped" });
+  return true; // Async response
 }
 
 function handleGetStatsRequest(request, sendResponse) {
@@ -102,6 +116,7 @@ function handleGetStatsRequest(request, sendResponse) {
       processedCount: result.processedCount || 0,
     });
   });
+  return true; // Async response
 }
 
 function handleIncrementProcessedRequest(request, sendResponse) {
@@ -111,29 +126,36 @@ function handleIncrementProcessedRequest(request, sendResponse) {
       console.log(`📈 İşlenen PR sayısı güncellendi: ${newCount}`);
       // Popup'a güncelleme mesajı gönder
       sendRuntimeMessage({ action: "processedUpdate", count: newCount });
+      // Callback içinde sendResponse çağır
+      sendResponse({ success: true });
     });
   });
-  sendResponse({ success: true });
+  return true; // Async response
 }
 
 function handleWaitForPopupRequest(request, sendResponse) {
   console.log("🪟 Popup pencere bekleme modu aktif edildi");
   console.log("📝 PR Kodu:", request.prCode);
-  waitingForPopup = true;
-  popupOriginTabId = request.originTabId;
-  currentPRCode = request.prCode;
 
-  // 30 saniye timeout - popup açılmazsa kilidi kaldır
+  // Async işlem için setTimeout kullan
   setTimeout(() => {
-    if (waitingForPopup) {
-      console.log("⏱️ Popup pencere timeout - kilit kaldırıldı");
-      waitingForPopup = false;
-      popupOriginTabId = null;
-      currentPRCode = null;
-    }
-  }, 30000);
+    waitingForPopup = true;
+    popupOriginTabId = request.originTabId;
+    currentPRCode = request.prCode;
 
-  sendResponse({ success: true });
+    // 30 saniye timeout - popup açılmazsa kilidi kaldır
+    setTimeout(() => {
+      if (waitingForPopup) {
+        console.log("⏱️ Popup pencere timeout - kilit kaldırıldı");
+        waitingForPopup = false;
+        popupOriginTabId = null;
+        currentPRCode = null;
+      }
+    }, 30000);
+
+    sendResponse({ success: true });
+  }, 0);
+  return true; // Async response
 }
 
 // =====================
@@ -282,11 +304,15 @@ function activateAndRunTab(tab, source) {
     message: `🎯 Mevcut THY sekmesi: ${tab.url}`,
   });
 
-  chrome.windows.update(tab.windowId, { focused: true });
-  chrome.tabs.update(tab.id, { active: true });
+  // Tab'ı öne getirme - popup açıksa kapanmasına neden oluyor
+  // Sadece mesaj göndereceğiz, focus değiştirmeyeceğiz
+  // chrome.windows.update(tab.windowId, { focused: true });
+  // chrome.tabs.update(tab.id, { active: true });
+
+  console.log("ℹ️ Tab activation atlandı (popup açık kalması için)");
   sendRuntimeMessage({
     action: "log",
-    message: "🔎 THY sekmesi öne getirildi",
+    message: "🔎 THY sekmesine mesaj gönderiliyor (focus değişmiyor)",
   });
 
   sendAutoRunToTab(tab.id);
@@ -520,14 +546,3 @@ async function waitForTabComplete(tabId, maxWait = 15000) {
     }, 500);
   });
 }
-
-// =====================
-// Error Handlers
-// =====================
-self.addEventListener("error", (event) => {
-  console.error("Background script global error:", event.error);
-});
-
-self.addEventListener("unhandledrejection", (event) => {
-  console.error("Background script unhandled promise rejection:", event.reason);
-});

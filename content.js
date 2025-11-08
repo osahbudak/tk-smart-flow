@@ -7,7 +7,7 @@
 // =====================
 const CONFIG = {
   MAX_RECORDS: 15, // Sadece 15 PR kontrol et - zaten en güncele göre sıralı
-  WAIT_TIMEOUT: 150000, // 2.5 minutes (default - storage'dan okunacak)
+  WAIT_TIMEOUT: 300000, // 5 minutes (default - storage'dan okunacak)
   RATE_LIMIT_DELAY: 15000, // 15 seconds
   AUTO_RUN_INTERVAL: 45000, // 45 seconds
   INITIAL_DELAY: 3000,
