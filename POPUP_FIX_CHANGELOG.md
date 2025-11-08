@@ -1,10 +1,10 @@
-# 🔥 TK SmartFlow v2.2 - Popup Pencere Desteği & Özelleştirilebilir Ayarlar
+# 🔥 TK SmartFlow v2.3 - Popup Pencere Desteği & Özelleştirilebilir Ayarlar
 
 **Durum:** ✅ **ÇÖZÜLDÜ VE TEST EDİLDİ**
 
 ---
 
-## 🆕 v2.2.1 Güncellemesi - Özelleştirilebilir Ayarlar
+## 🆕 v2.3 Güncellemesi - Özelleştirilebilir Ayarlar
 
 ### **Yeni Özellikler:**
 
@@ -123,7 +123,7 @@ chrome.tabs.sendMessage(thyTab.id, {
 - ❌ Console'da `❌ PR detay sayfası açılamadı - URL değişmedi` hatası alınıyordu
 - ❌ `sender.tab` undefined olduğu için Tab ID null geliyordu
 
-### **Yeni Durum (v2.2):**
+### **Yeni Durum (v2.3):**
 
 - ✅ Yeni pencere otomatik yakalanıyor
 - ✅ "Müdahaleye Başla" butonuna otomatik basılıyor
@@ -734,7 +734,7 @@ TK_SmartFlow.analyze(); // Sistem durumu
 
 ---
 
-**TK SmartFlow v2.2** - Popup Pencere Desteği ile Güçlendirildi! 🚀
+**TK SmartFlow v2.3** - Özelleştirilebilir Ayarlar ve Popup Desteği ile Güçlendirildi! 🚀
 
 **Test Durumu:** ✅ Başarıyla test edildi ve çalışıyor
 **Son Güncelleme:** 7 Kasım 2025

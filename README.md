@@ -1,6 +1,6 @@
 # 🚀 TK SmartFlow - THY PR Otomasyon Sistemi
 
-**v2.2** - Profesyonel PR kayıt işleme otomasyonu. Yeni pencerede açılan PR detaylarını otomatik yakalar ve işler.
+**v2.3** - Profesyonel PR kayıt işleme otomasyonu. Özelleştirilebilir ayarlar ve gelişmiş loglama ile yeni pencerede açılan PR detaylarını otomatik yakalar ve işler.
 
 ---
 
@@ -15,7 +15,7 @@
 - ✅ **10 Dakika Güvenlik Döngüsü**: Background'da sürekli çalışır
 - ✅ **Rate Limit Koruması**: 15 saniye bekleme ile güvenli işlem
 
-### 🪟 v2.2 Yeni Özellikler
+### 🪟 v2.3 Yeni Özellikler
 
 - 🆕 **Popup Pencere Yakalama**: `IS_POPUP=1` parametreli pencereler otomatik tespit edilir
 - 🆕 **Müdahaleye Başla Butonu Otomasyonu**: Popup'ta "Müdahaleye Başla" butonuna otomatik tıklar
@@ -272,7 +272,7 @@ tk-smart-flow/
 ├── icons/
 │   └── icon.svg              # Extension ikonu
 ├── README.md                  # Bu dosya
-└── POPUP_FIX_CHANGELOG.md    # v2.2 teknik detaylar
+└── POPUP_FIX_CHANGELOG.md    # v2.3 teknik detaylar
 ```
 
 ---
@@ -289,7 +289,7 @@ tk-smart-flow/
 
 ## 📝 Versiyon Geçmişi
 
-### v2.2 (Mevcut) - Popup Pencere Desteği
+### v2.3 (Mevcut) - Özelleştirilebilir Ayarlar ve Popup Desteği
 
 - 🆕 Yeni pencerede açılan PR'ları otomatik yakalama
 - 🆕 Popup'ta "Müdahaleye Başla" butonuna otomatik tıklama
@@ -334,5 +334,5 @@ Bu proje THY iç kullanımı için geliştirilmiştir. Öneriler için lütfen i
 
 ---
 
-**TK SmartFlow v2.2** - Turkish Technology © 2025
+**TK SmartFlow v2.3** - Turkish Technology © 2025
 _Professional PR Intervention System for THY Operations_
