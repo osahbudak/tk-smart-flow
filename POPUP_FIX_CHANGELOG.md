@@ -1,6 +1,115 @@
-# 🔥 TK SmartFlow v2.2 - Popup Pencere Desteği
+# 🔥 TK SmartFlow v2.3 - Popup Pencere Desteği & Özelleştirilebilir Ayarlar
 
 **Durum:** ✅ **ÇÖZÜLDÜ VE TEST EDİLDİ**
+
+---
+
+## 🆕 v2.3 Güncellemesi - Özelleştirilebilir Ayarlar
+
+### **Yeni Özellikler:**
+
+#### 1. **Sayfa Yenileme Aralığı Ayarı**
+
+- ✅ Kullanıcı popup'tan yenileme süresini özelleştirebilir
+- ✅ **Minimum**: 60 saniye (1 dakika)
+- ✅ **Maksimum**: 1800 saniye (30 dakika)
+- ✅ **Varsayılan**: 300 saniye (5 dakika)
+- ✅ **Artış**: 15 saniye adımlarla
+- ✅ Değer `chrome.storage.local`'de saklanır
+- ✅ Tüm sekmelerde senkronize çalışır
+
+#### 2. **Gerçek Zamanlı Dakika Gösterimi**
+
+- ✅ Girilen saniye değeri anlık olarak dakika formatına çevrilir
+- ✅ Format: "5 dakika" veya "5 dk 15 sn"
+- ✅ Input değiştiğinde anında güncellenir
+- ✅ Minimum/maksimum aşımlarında otomatik düzeltme
+
+#### 3. **PR Kodu Loglama**
+
+- ✅ Her PR işleminde kod bilgisi loglara eklenir
+- ✅ Format: `✅ PR-000762492025 - Popup'ta 'Müdahaleye Başla' butonuna basıldı`
+- ✅ Popup işlemlerinde PR takibi kolaylaştı
+- ✅ Team lead'ler hangi PR'ın işlendiğini görebilir
+
+#### 4. **Tutarlı Zaman Formatı**
+
+- ✅ Tüm loglarda dakika-saniye formatı kullanılır
+- ✅ Yuvarlamadan kaynaklanan hatalı gösterimler düzeltildi
+- ✅ Örnek: 90 saniye → "1 dk 30 sn" (önceden "2 dakika" gösteriyordu)
+
+### **Teknik Değişiklikler:**
+
+#### popup.js
+
+```javascript
+const CONFIG = {
+  WAIT_TIMEOUT: {
+    MIN: 60, // 1 dakika
+    MAX: 1800, // 30 dakika
+    DEFAULT: 300, // 5 dakika
+    STEP: 15, // 15 saniye
+  },
+};
+
+function updateWaitTimeoutInfo() {
+  const minutes = Math.floor(value / 60);
+  const seconds = value % 60;
+
+  if (seconds === 0) {
+    elements.waitTimeoutInfo.textContent = `= ${minutes} dakika`;
+  } else {
+    elements.waitTimeoutInfo.textContent = `= ${minutes} dk ${seconds} sn`;
+  }
+}
+```
+
+#### content.js
+
+```javascript
+// Dynamic config - storage'dan yüklenir
+let dynamicConfig = {
+  waitTimeout: CONFIG.WAIT_TIMEOUT,
+};
+
+chrome.storage.local.get(["waitTimeout"], (result) => {
+  if (result.waitTimeout) {
+    dynamicConfig.waitTimeout = result.waitTimeout * 1000;
+  }
+});
+
+// Storage değişikliklerini dinle
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "local" && changes.waitTimeout) {
+    dynamicConfig.waitTimeout = changes.waitTimeout.newValue * 1000;
+    logMessage(
+      `⚙️ Sayfa yenileme aralığı ${changes.waitTimeout.newValue} saniye olarak güncellendi`
+    );
+  }
+});
+```
+
+#### background.js
+
+```javascript
+// PR kodu state'e eklendi
+let currentPRCode = null;
+
+function handleWaitForPopupRequest(request, sendResponse) {
+  waitingForPopup = true;
+  popupOriginTabId = request.originTabId;
+  currentPRCode = request.prCode; // ← YENİ
+  sendResponse({ success: true });
+}
+
+// Popup'a PR kodu gönderiliyor
+chrome.tabs.sendMessage(thyTab.id, {
+  action: "clickInterventionButtonInPopup",
+  originTabId: popupOriginTabId,
+  popupWindowId: window.id,
+  prCode: currentPRCode, // ← YENİ
+});
+```
 
 ---
 
@@ -14,7 +123,7 @@
 - ❌ Console'da `❌ PR detay sayfası açılamadı - URL değişmedi` hatası alınıyordu
 - ❌ `sender.tab` undefined olduğu için Tab ID null geliyordu
 
-### **Yeni Durum (v2.2):**
+### **Yeni Durum (v2.3):**
 
 - ✅ Yeni pencere otomatik yakalanıyor
 - ✅ "Müdahaleye Başla" butonuna otomatik basılıyor
@@ -625,7 +734,7 @@ TK_SmartFlow.analyze(); // Sistem durumu
 
 ---
 
-**TK SmartFlow v2.2** - Popup Pencere Desteği ile Güçlendirildi! 🚀
+**TK SmartFlow v2.3** - Özelleştirilebilir Ayarlar ve Popup Desteği ile Güçlendirildi! 🚀
 
 **Test Durumu:** ✅ Başarıyla test edildi ve çalışıyor
 **Son Güncelleme:** 7 Kasım 2025

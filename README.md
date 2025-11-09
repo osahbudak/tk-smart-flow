@@ -1,6 +1,6 @@
 # 🚀 TK SmartFlow - THY PR Otomasyon Sistemi
 
-**v2.2** - Profesyonel PR kayıt işleme otomasyonu. Yeni pencerede açılan PR detaylarını otomatik yakalar ve işler.
+**v2.3** - Profesyonel PR kayıt işleme otomasyonu. Özelleştirilebilir ayarlar ve gelişmiş loglama ile yeni pencerede açılan PR detaylarını otomatik yakalar ve işler.
 
 ---
 
@@ -15,13 +15,16 @@
 - ✅ **10 Dakika Güvenlik Döngüsü**: Background'da sürekli çalışır
 - ✅ **Rate Limit Koruması**: 15 saniye bekleme ile güvenli işlem
 
-### 🪟 v2.2 Yeni Özellikler
+### 🪟 v2.3 Yeni Özellikler
 
 - 🆕 **Popup Pencere Yakalama**: `IS_POPUP=1` parametreli pencereler otomatik tespit edilir
 - 🆕 **Müdahaleye Başla Butonu Otomasyonu**: Popup'ta "Müdahaleye Başla" butonuna otomatik tıklar
 - 🆕 **Otomatik Pencere Kapanma**: İşlem sonrası popup penceresi temizlenir
 - 🆕 **Fallback Tab ID Sistemi**: `sender.tab` undefined olsa bile çalışır
 - 🆕 **10 Deneme Mekanizması**: Yavaş açılan popup'lar için retry sistemi
+- 🆕 **Özelleştirilebilir Yenileme Aralığı**: Kullanıcı 1-30 dakika arası bekleme süresi ayarlayabilir
+- 🆕 **Gerçek Zamanlı Dakika Gösterimi**: Girilen saniye değeri anlık olarak dakika formatında gösterilir
+- 🆕 **PR Kodu Loglama**: Her PR işleminde kod bilgisi loglara eklenir
 
 ---
 
@@ -69,6 +72,16 @@ Yöntem 2: Console'da TK_SmartFlow.startAutoRun()
 | 🚀 **Tek Çalıştır**   | Auto-run olmadan tek seferlik tarama |
 | ⚡ **Hızlı Tarama**   | Rate limit'siz acil tarama           |
 | 📊 **Sistem Analizi** | DOM ve sistem durumu raporu          |
+
+#### **⚙️ Ayarlar**
+
+**Sayfa Yenileme Aralığı**
+- Tüm PR'ler işlendikten sonra yeni PR kontrolü için bekleme süresi
+- **Minimum**: 60 saniye (1 dakika)
+- **Maksimum**: 1800 saniye (30 dakika)
+- **Varsayılan**: 300 saniye (5 dakika)
+- **Artış**: 15 saniye adımlarla
+- Girilen değer otomatik olarak dakika formatında gösterilir (örn: "5 dk 15 sn")
 
 ### Console API (Gelişmiş Kullanım)
 
@@ -259,7 +272,7 @@ tk-smart-flow/
 ├── icons/
 │   └── icon.svg              # Extension ikonu
 ├── README.md                  # Bu dosya
-└── POPUP_FIX_CHANGELOG.md    # v2.2 teknik detaylar
+└── POPUP_FIX_CHANGELOG.md    # v2.3 teknik detaylar
 ```
 
 ---
@@ -276,7 +289,7 @@ tk-smart-flow/
 
 ## 📝 Versiyon Geçmişi
 
-### v2.2 (Mevcut) - Popup Pencere Desteği
+### v2.3 (Mevcut) - Özelleştirilebilir Ayarlar ve Popup Desteği
 
 - 🆕 Yeni pencerede açılan PR'ları otomatik yakalama
 - 🆕 Popup'ta "Müdahaleye Başla" butonuna otomatik tıklama
@@ -321,5 +334,5 @@ Bu proje THY iç kullanımı için geliştirilmiştir. Öneriler için lütfen i
 
 ---
 
-**TK SmartFlow v2.2** - Turkish Technology © 2025
+**TK SmartFlow v2.3** - Turkish Technology © 2025
 _Professional PR Intervention System for THY Operations_
