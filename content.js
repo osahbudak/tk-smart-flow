@@ -825,7 +825,7 @@ async function scanForPRs() {
       const prCode = match[0];
       const assigned = row.querySelector("td:nth-child(8) span");
 
-      if (assigned && assigned.textContent === "") {
+      if (assigned && assigned.textContent !== "") {
         processedSkipped++;
         LOG(`⏭️ ${prCode} zaten işlenmiş, atlanıyor`);
         continue;
