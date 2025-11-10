@@ -119,10 +119,11 @@ function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
 4. Background: "✅ THY PR detay popup sekmesi bulundu (YENİ SEKME)"
 5. Content: "📑 PR-000762492025 - Popup sekmede 'Müdahaleye Başla' butonu aranıyor..."
 6. Content: "✅ PR-000762492025 - Popup'ta 'Müdahaleye Başla' butonuna basıldı"
-7. Content: "📑 PR-000762492025 - Popup sekmesi kapatılıyor..."
-8. Background: "🗑️ Sekme kapatma isteği alındı"
-9. Background: "✅ Sekme kapatıldı"
+7. Content: "✅ PR-000762492025 - Popup işlemi tamamlandı (açık kalıyor)"
+8. Sekme AÇIK KALIR - Kullanıcı hangi PR'larda müdahaleye başlanmış görebilir
 ```
+
+**NOT:** Yeni sekme senaryosunda sekmeler bilerek açık bırakılır.
 
 ### **Avantajlar:**
 - ✅ **Evrensel Uyumluluk**: Tüm kullanıcı konfigürasyonlarında çalışır
@@ -133,7 +134,7 @@ function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
 
 ---
 
-## 🆕 v2.3 Güncellemesi - Özelleştirilebilir Ayarlar
+## 📦 v2.3 Güncellemesi - Özelleştirilebilir Ayarlar (Geçmiş)
 
 ### **Yeni Özellikler:**
 
@@ -252,7 +253,7 @@ chrome.tabs.sendMessage(thyTab.id, {
 - ❌ Console'da `❌ PR detay sayfası açılamadı - URL değişmedi` hatası alınıyordu
 - ❌ `sender.tab` undefined olduğu için Tab ID null geliyordu
 
-### **Yeni Durum (v2.3):**
+### **Yeni Durum (v2.4):**
 
 - ✅ Yeni pencere otomatik yakalanıyor
 - ✅ "Müdahaleye Başla" butonuna otomatik basılıyor
@@ -863,7 +864,7 @@ TK_SmartFlow.analyze(); // Sistem durumu
 
 ---
 
-**TK SmartFlow v2.3** - Özelleştirilebilir Ayarlar ve Popup Desteği ile Güçlendirildi! 🚀
+**TK SmartFlow v2.4** - Hibrit Açılma Desteği ile Güçlendirildi! 🚀
 
 **Test Durumu:** ✅ Başarıyla test edildi ve çalışıyor
 **Son Güncelleme:** 7 Kasım 2025

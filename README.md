@@ -24,7 +24,7 @@
 - 🆕 **Tekrar Kontrol Önleme**: `checkedTabIds` ile performans optimizasyonu
 - 🆕 **Evrensel Uyumluluk**: Tüm kullanıcı konfigürasyonlarında çalışır
 
-### 🪟 v2.3 Özellikler
+### 🪟 v2.3 ve Önceki Özellikler
 
 - ✅ **Popup Pencere Yakalama**: `IS_POPUP=1` parametreli pencereler otomatik tespit edilir
 - ✅ **Müdahaleye Başla Butonu Otomasyonu**: Popup'ta "Müdahaleye Başla" butonuna otomatik tıklar
@@ -137,7 +137,9 @@ TK_SmartFlow.debugSort();
    - Yeni pencere/sekme açılır (IS_POPUP=1)
    - Background otomatik yakalar (sekme veya pencere)
    - "Müdahaleye Başla" butonuna bas
-   - Akıllı kapama (sekme → tabs.remove, pencere → windows.remove)
+   - Popup açık kalır:
+     • Yeni Pencere: Sistem kendisi kapatır
+     • Yeni Sekme: Hangi PR'larda müdahaleye başlandığını görmek için açık kalır
    - Sonraki PR'a geç
    ↓
 7. 2.5 dakika bekle
@@ -313,7 +315,7 @@ tk-smart-flow/
 - 🔥 **YENİ:** `closeTab` background handler'ı
 - ✅ Evrensel uyumluluk - tüm kullanıcılarda çalışır
 
-### v2.3 - Özelleştirilebilir Ayarlar ve Popup Desteği
+### v2.3 (Geçmiş) - Özelleştirilebilir Ayarlar ve Popup Desteği
 
 - 🆕 Yeni pencerede açılan PR'ları otomatik yakalama
 - 🆕 Popup'ta "Müdahaleye Başla" butonuna otomatik tıklama
