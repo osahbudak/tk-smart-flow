@@ -529,7 +529,7 @@ function detectPageType() {
   }
 
   // Detay sayfası kontrolü
-  if (content.includes("Çözüldü")) {
+  if (content.includes("Müdahaleye Başla")) {
     return PAGE_TYPES.DETAIL;
   }
 
@@ -995,7 +995,7 @@ function findInterventionButton() {
     const text = button.textContent?.toLowerCase() || "";
     const isVisible = button.offsetParent !== null && !button.disabled;
 
-    if (isVisible && text.includes("çözüldü")) {
+    if (isVisible && text.includes("müdahaleye başla")) {
       return button;
     }
   }
