@@ -386,11 +386,37 @@ function sendAutoRunToTab(tabId) {
       const msg = chrome.runtime.lastError.message || "";
       console.warn("Content script mesaj hatası:", msg);
 
-      // Sadece connection kurulamadıysa bir kez daha dene (çoklu tetikleme önleme)
+      // Content script yüklenmemişse otomatik yükle
       if (msg.includes("Could not establish connection")) {
-        setTimeout(() => {
-          retryAutoRunMessage(tabId);
-        }, CONFIG.RETRY_DELAY);
+        console.log("🔧 Content script yüklenmemiş, otomatik yükleniyor...");
+        sendRuntimeMessage({
+          action: "log",
+          message: "🔧 Content script yükleniyor...",
+        });
+
+        // Content script'i programatik olarak enjekte et
+        injectContentScript(tabId)
+          .then(() => {
+            console.log(
+              "✅ Content script yüklendi, mesaj tekrar gönderiliyor..."
+            );
+            sendRuntimeMessage({
+              action: "log",
+              message: "✅ Content script yüklendi",
+            });
+
+            // Kısa bekle ve mesajı tekrar gönder
+            setTimeout(() => {
+              retryAutoRunMessage(tabId);
+            }, CONFIG.RETRY_DELAY);
+          })
+          .catch((error) => {
+            console.error("❌ Content script yüklenemedi:", error);
+            sendRuntimeMessage({
+              action: "log",
+              message: "❌ Content script yüklenemedi - Sayfayı yenileyin",
+            });
+          });
       }
     } else {
       console.log("✅ Otomasyon başarıyla tetiklendi:", response);
@@ -621,10 +647,40 @@ function isThyUrl(url) {
   return url.includes("turuncuhat.thy.com") || url.includes("auth.thy.com");
 }
 
+// Content script'i programatik olarak enjekte et
+async function injectContentScript(tabId) {
+  try {
+    console.log(`🔧 Content script enjekte ediliyor: ${tabId}`);
+
+    // content.js'i enjekte et
+    await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      files: ["content.js"],
+    });
+
+    console.log(`✅ Content script başarıyla enjekte edildi: ${tabId}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Content script enjekte hatası (${tabId}):`, error);
+    throw error;
+  }
+}
+
 function checkContentScriptReady(tabId) {
   chrome.tabs.sendMessage(tabId, { action: "ping" }, (response) => {
     if (chrome.runtime.lastError) {
-      console.log("📥 Content script henüz hazır değil, yeniden denenecek...");
+      console.log(
+        "📥 Content script henüz hazır değil, otomatik yükleniyor..."
+      );
+
+      // Content script'i otomatik yükle
+      injectContentScript(tabId)
+        .then(() => {
+          console.log("✅ Content script otomatik yüklendi");
+        })
+        .catch((error) => {
+          console.log("⚠️ Content script yüklenemedi:", error.message);
+        });
     } else {
       console.log("✅ Content script hazır");
     }

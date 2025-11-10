@@ -118,9 +118,10 @@ function handleStartClick() {
     setTimeout(() => {
       updateUI(true);
       addLog(
-        "✅ Auto-run modu başlatıldı - 15sn rate limit + sürekli döngü",
+        "✅ Auto-run modu başlatıldı - Sistem otomatik çalışacak",
         "success"
       );
+      addLog("ℹ️ Content script otomatik yüklenecek (gerekirse)", "info");
     }, CONFIG.LOADING_DELAY);
   });
 }
