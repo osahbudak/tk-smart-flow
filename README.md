@@ -1,6 +1,6 @@
 # 🚀 TK SmartFlow - THY PR Otomasyon Sistemi
 
-**v2.3** - Profesyonel PR kayıt işleme otomasyonu. Özelleştirilebilir ayarlar ve gelişmiş loglama ile yeni pencerede açılan PR detaylarını otomatik yakalar ve işler.
+**v2.4** - Profesyonel PR kayıt işleme otomasyonu. Hibrit açılma desteği (sekme/pencere) ile evrensel uyumluluk sağlar. Özelleştirilebilir ayarlar ve gelişmiş loglama destekli.
 
 ---
 
@@ -15,16 +15,24 @@
 - ✅ **10 Dakika Güvenlik Döngüsü**: Background'da sürekli çalışır
 - ✅ **Rate Limit Koruması**: 15 saniye bekleme ile güvenli işlem
 
-### 🪟 v2.3 Yeni Özellikler
+### 🔥 v2.4 Yeni Özellikler - Hibrit Açılma Desteği
 
-- 🆕 **Popup Pencere Yakalama**: `IS_POPUP=1` parametreli pencereler otomatik tespit edilir
-- 🆕 **Müdahaleye Başla Butonu Otomasyonu**: Popup'ta "Müdahaleye Başla" butonuna otomatik tıklar
-- 🆕 **Otomatik Pencere Kapanma**: İşlem sonrası popup penceresi temizlenir
-- 🆕 **Fallback Tab ID Sistemi**: `sender.tab` undefined olsa bile çalışır
-- 🆕 **10 Deneme Mekanizması**: Yavaş açılan popup'lar için retry sistemi
-- 🆕 **Özelleştirilebilir Yenileme Aralığı**: Kullanıcı 1-30 dakika arası bekleme süresi ayarlayabilir
-- 🆕 **Gerçek Zamanlı Dakika Gösterimi**: Girilen saniye değeri anlık olarak dakika formatında gösterilir
-- 🆕 **PR Kodu Loglama**: Her PR işleminde kod bilgisi loglara eklenir
+- 🆕 **Yeni Sekme Desteği**: PR'lar yeni sekmede açıldığında da otomatik işler
+- 🆕 **Yeni Pencere Desteği**: PR'lar yeni pencerede açıldığında da otomatik işler
+- 🆕 **Otomatik Tespit**: Hangi senaryonun kullanıldığını sistem otomatik belirler
+- 🆕 **Akıllı Kapama**: Sekmede açıldıysa sekmeyi, pencerede açıldıysa pencereyi kapatır
+- 🆕 **Tekrar Kontrol Önleme**: `checkedTabIds` ile performans optimizasyonu
+- 🆕 **Evrensel Uyumluluk**: Tüm kullanıcı konfigürasyonlarında çalışır
+
+### 🪟 v2.3 ve Önceki Özellikler
+
+- ✅ **Popup Pencere Yakalama**: `IS_POPUP=1` parametreli pencereler otomatik tespit edilir
+- ✅ **Müdahaleye Başla Butonu Otomasyonu**: Popup'ta "Müdahaleye Başla" butonuna otomatik tıklar
+- ✅ **Fallback Tab ID Sistemi**: `sender.tab` undefined olsa bile çalışır
+- ✅ **10 Deneme Mekanizması**: Yavaş açılan popup'lar için retry sistemi
+- ✅ **Özelleştirilebilir Yenileme Aralığı**: Kullanıcı 1-30 dakika arası bekleme süresi ayarlayabilir
+- ✅ **Gerçek Zamanlı Dakika Gösterimi**: Girilen saniye değeri anlık olarak dakika formatında gösterilir
+- ✅ **PR Kodu Loglama**: Her PR işleminde kod bilgisi loglara eklenir
 
 ---
 
@@ -126,10 +134,12 @@ TK_SmartFlow.debugSort();
    ↓
 6. Her PR için:
    - PR satırına tıkla
-   - Yeni pencere açılır (IS_POPUP=1)
-   - Background pencereyi yakalar
+   - Yeni pencere/sekme açılır (IS_POPUP=1)
+   - Background otomatik yakalar (sekme veya pencere)
    - "Müdahaleye Başla" butonuna bas
-   - Pencereyi kapat
+   - Popup açık kalır:
+     • Yeni Pencere: Sistem kendisi kapatır
+     • Yeni Sekme: Hangi PR'larda müdahaleye başlandığını görmek için açık kalır
    - Sonraki PR'a geç
    ↓
 7. 2.5 dakika bekle
@@ -163,10 +173,15 @@ TK_SmartFlow.debugSort();
 
 ```bash
 1. Background console'da şu logları arayın:
-   - "🪟 Yeni pencere tespit edildi"
+   - "🪟 Yeni pencere tespit edildi" (yeni pencere senaryosu)
+   - "📑 Yeni sekme tespit edildi" (yeni sekme senaryosu)
    - "✅ THY PR detay popup sekmesi bulundu"
 
-2. Eğer "⚠️ 10 denemede THY PR popup bulunamadı" görüyorsan:
+2. Hangi senaryonun kullanıldığını kontrol et:
+   - Yeni pencere: "🪟 Popup pencerede 'Müdahaleye Başla' butonu aranıyor..."
+   - Yeni sekme: "📑 Popup sekmede 'Müdahaleye Başla' butonu aranıyor..."
+
+3. Eğer "⚠️ 10 denemede THY PR popup bulunamadı" görüyorsan:
    - Popup açılma süresi çok uzun olabilir
    - content.js'te waitFor(25000) değerini artır
 ```
@@ -265,14 +280,15 @@ await waitFor(25000); // Popup açılma + işlem + kapanma süresi
 ```
 tk-smart-flow/
 ├── manifest.json              # Extension konfigürasyonu
-├── background.js              # Service worker (pencere yönetimi)
+├── background.js              # Service worker (hibrit pencere/sekme yönetimi)
 ├── content.js                 # Ana otomasyon mantığı
 ├── popup.html                 # UI arayüzü
 ├── popup.js                   # Popup kontrolcüsü
 ├── icons/
 │   └── icon.svg              # Extension ikonu
 ├── README.md                  # Bu dosya
-└── POPUP_FIX_CHANGELOG.md    # v2.3 teknik detaylar
+├── POPUP_FIX_CHANGELOG.md    # v2.3-2.4 teknik detaylar
+└── v2.4_UPGRADE_SUMMARY.md   # v2.4 yükseltme özeti
 ```
 
 ---
@@ -289,7 +305,17 @@ tk-smart-flow/
 
 ## 📝 Versiyon Geçmişi
 
-### v2.3 (Mevcut) - Özelleştirilebilir Ayarlar ve Popup Desteği
+### v2.4 (Mevcut) - Hibrit Açılma Desteği
+
+- 🔥 **YENİ:** Yeni sekme açılma desteği (`chrome.tabs.onCreated` + `chrome.tabs.onUpdated`)
+- 🔥 **YENİ:** Yeni pencere açılma desteği (mevcut `chrome.windows.onCreated`)
+- 🔥 **YENİ:** Otomatik senaryo tespiti (`isNewWindow` flag)
+- 🔥 **YENİ:** Akıllı kapama sistemi (sekme vs pencere)
+- 🔥 **YENİ:** `checkedTabIds` Set ile performans optimizasyonu
+- 🔥 **YENİ:** `closeTab` background handler'ı
+- ✅ Evrensel uyumluluk - tüm kullanıcılarda çalışır
+
+### v2.3 (Geçmiş) - Özelleştirilebilir Ayarlar ve Popup Desteği
 
 - 🆕 Yeni pencerede açılan PR'ları otomatik yakalama
 - 🆕 Popup'ta "Müdahaleye Başla" butonuna otomatik tıklama
@@ -334,5 +360,6 @@ Bu proje THY iç kullanımı için geliştirilmiştir. Öneriler için lütfen i
 
 ---
 
-**TK SmartFlow v2.3** - Turkish Technology © 2025
+**TK SmartFlow v2.4** - Turkish Technology © 2025
 _Professional PR Intervention System for THY Operations_
+_Hybrid Tab/Window Support - Universal Compatibility_

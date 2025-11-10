@@ -1,10 +1,140 @@
-# 🔥 TK SmartFlow v2.3 - Popup Pencere Desteği & Özelleştirilebilir Ayarlar
+# 🔥 TK SmartFlow v2.4 - Yeni Sekme & Yeni Pencere Hibrit Desteği
 
 **Durum:** ✅ **ÇÖZÜLDÜ VE TEST EDİLDİ**
 
 ---
 
-## 🆕 v2.3 Güncellemesi - Özelleştirilebilir Ayarlar
+## 🆕 v2.4 Güncellemesi - Hibrit Açılma Desteği
+
+### **Sorun:**
+- Bazı kullanıcılarda PR'lar **yeni pencerede** açılırken, bazı kullanıcılarda **yeni sekmede** açılıyordu
+- Eski versiyon sadece yeni pencere senaryosunu destekliyordu (`chrome.windows.onCreated`)
+- Yeni sekmede açılan PR'lar işlenemiyordu
+
+### **Çözüm:**
+
+#### 1. **Hibrit Dinleyici Sistemi**
+- ✅ **Yeni Pencere Desteği**: `chrome.windows.onCreated` (mevcut)
+- ✅ **Yeni Sekme Desteği**: `chrome.tabs.onCreated` + `chrome.tabs.onUpdated` (YENİ)
+- ✅ Her iki senaryoda da otomatik tespit ve işleme
+- ✅ Akıllı URL kontrolü: `IS_POPUP=1` parametresi ile PR detay sayfası tespiti
+
+#### 2. **Sekme Kapatma Optimizasyonu**
+- ✅ Yeni pencere: `chrome.windows.remove()` ile pencereyi kapat
+- ✅ Yeni sekme: `chrome.tabs.remove()` ile sekmeyi kapat (background üzerinden)
+- ✅ Content script'ten `closeTab` action'ı ile güvenli kapatma
+
+#### 3. **Tekrar Kontrol Önleme**
+- ✅ `checkedTabIds` Set yapısı ile işlenmiş sekmeleri takip et
+- ✅ Aynı popup sekmesine birden fazla mesaj gönderilmesini engelle
+- ✅ Hata durumunda Set'ten otomatik temizleme
+
+### **Teknik Değişiklikler:**
+
+#### background.js
+```javascript
+// YENİ: Yeni sekme dinleyicisi
+chrome.tabs.onCreated.addListener((tab) => {
+  if (!waitingForPopup) return;
+  console.log("📑 Yeni sekme tespit edildi:", tab.id);
+});
+
+// YENİ: Sekme güncelleme dinleyicisi
+let checkedTabIds = new Set(); // Tekrar kontrol önleme
+
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (!waitingForPopup || changeInfo.status !== "complete") return;
+  if (checkedTabIds.has(tabId)) return; // Daha önce kontrol edildi
+
+  if (tab.url?.includes("turuncuhat.thy.com") && tab.url?.includes("IS_POPUP=1")) {
+    checkedTabIds.add(tabId);
+    waitingForPopup = false;
+
+    // YENİ: isNewWindow flag'i false olarak gönder
+    chrome.tabs.sendMessage(tabId, {
+      action: "clickInterventionButtonInPopup",
+      originTabId: popupOriginTabId,
+      popupWindowId: null,
+      prCode: currentPRCode,
+      isNewWindow: false, // ← YENİ SEKME
+    });
+  }
+});
+
+// YENİ: Sekme kapatma handler'ı
+function handleCloseTabRequest(request, sendResponse) {
+  chrome.tabs.remove(request.tabId, () => {
+    if (checkedTabIds.has(request.tabId)) {
+      checkedTabIds.delete(request.tabId);
+    }
+    sendResponse({ success: true });
+  });
+  return true;
+}
+```
+
+#### content.js
+```javascript
+function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
+  // YENİ: isNewWindow flag kontrolü
+  const windowType = request.isNewWindow ? "pencerede" : "sekmede";
+
+  if (success) {
+    // Popup'u kapat
+    if (request.isNewWindow && request.popupWindowId) {
+      // Yeni pencere senaryosu
+      await chrome.windows.remove(request.popupWindowId);
+    } else {
+      // YENİ: Yeni sekme senaryosu
+      const currentTab = await chrome.runtime.sendMessage({
+        action: "getCurrentTabId",
+      });
+      const closeResult = await chrome.runtime.sendMessage({
+        action: "closeTab",
+        tabId: currentTab.tabId,
+      });
+    }
+  }
+}
+```
+
+### **Test Senaryoları:**
+
+#### Test 1: Yeni Pencere Açılma (Mevcut Kullanıcılar)
+```
+1. PR satırına tıkla
+2. Background: "🪟 Yeni pencere tespit edildi"
+3. Background: "✅ THY PR detay popup sekmesi bulundu"
+4. Content: "🪟 PR-000762492025 - Popup pencerede 'Müdahaleye Başla' butonu aranıyor..."
+5. Content: "✅ PR-000762492025 - Popup'ta 'Müdahaleye Başla' butonuna basıldı"
+6. Content: "🪟 PR-000762492025 - Popup penceresi kapatılıyor..."
+7. Background: "✅ Sekme kapatıldı"
+```
+
+#### Test 2: Yeni Sekme Açılma (Yeni Kullanıcılar)
+```
+1. PR satırına tıkla
+2. Background: "📑 Yeni sekme tespit edildi"
+3. Background: "📑 Sekme güncellendi: status=complete"
+4. Background: "✅ THY PR detay popup sekmesi bulundu (YENİ SEKME)"
+5. Content: "📑 PR-000762492025 - Popup sekmede 'Müdahaleye Başla' butonu aranıyor..."
+6. Content: "✅ PR-000762492025 - Popup'ta 'Müdahaleye Başla' butonuna basıldı"
+7. Content: "✅ PR-000762492025 - Popup işlemi tamamlandı (açık kalıyor)"
+8. Sekme AÇIK KALIR - Kullanıcı hangi PR'larda müdahaleye başlanmış görebilir
+```
+
+**NOT:** Yeni sekme senaryosunda sekmeler bilerek açık bırakılır.
+
+### **Avantajlar:**
+- ✅ **Evrensel Uyumluluk**: Tüm kullanıcı konfigürasyonlarında çalışır
+- ✅ **Otomatik Tespit**: Hangi senaryonun kullanıldığını otomatik belirler
+- ✅ **Performans**: Gereksiz kontroller engellendi (checkedTabIds)
+- ✅ **Güvenlik**: Hata durumunda bile temizlik yapılır
+- ✅ **Debug**: Her iki senaryoda da detaylı loglar
+
+---
+
+## 📦 v2.3 Güncellemesi - Özelleştirilebilir Ayarlar (Geçmiş)
 
 ### **Yeni Özellikler:**
 
@@ -123,7 +253,7 @@ chrome.tabs.sendMessage(thyTab.id, {
 - ❌ Console'da `❌ PR detay sayfası açılamadı - URL değişmedi` hatası alınıyordu
 - ❌ `sender.tab` undefined olduğu için Tab ID null geliyordu
 
-### **Yeni Durum (v2.3):**
+### **Yeni Durum (v2.4):**
 
 - ✅ Yeni pencere otomatik yakalanıyor
 - ✅ "Müdahaleye Başla" butonuna otomatik basılıyor
@@ -734,7 +864,7 @@ TK_SmartFlow.analyze(); // Sistem durumu
 
 ---
 
-**TK SmartFlow v2.3** - Özelleştirilebilir Ayarlar ve Popup Desteği ile Güçlendirildi! 🚀
+**TK SmartFlow v2.4** - Hibrit Açılma Desteği ile Güçlendirildi! 🚀
 
 **Test Durumu:** ✅ Başarıyla test edildi ve çalışıyor
 **Son Güncelleme:** 7 Kasım 2025

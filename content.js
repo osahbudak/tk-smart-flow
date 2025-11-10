@@ -254,12 +254,14 @@ function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
   console.log("📍 Origin Tab ID:", request.originTabId);
   console.log("📍 Popup Window ID:", request.popupWindowId);
   console.log("📍 PR Kodu:", request.prCode);
+  console.log("📍 Yeni Pencere mi:", request.isNewWindow);
 
   // Popup sayfasında "Müdahaleye Başla" butonunu bul ve tıkla
   (async () => {
     try {
+      const windowType = request.isNewWindow ? "pencerede" : "sekmede";
       logMessage(
-        `🪟 ${request.prCode} - Popup pencerede 'Müdahaleye Başla' butonu aranıyor...`
+        `🪟 ${request.prCode} - Popup ${windowType} 'Müdahaleye Başla' butonu aranıyor...`
       );
 
       // Sayfa tam yüklenene kadar bekle
@@ -275,16 +277,23 @@ function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
         // PR sayacını artır
         chrome.runtime.sendMessage({ action: "incrementProcessed" });
 
-        // Popup otomatik kapanacak (site kendisi kapatır)
-        // 5 saniye bekle (popup kapanana kadar)
-        await waitFor(5000);
+        // NOT: Popup'u KAPATMIYORUZ - İşte sebepler:
+        // 1. Yeni Pencere: Sistem zaten otomatik kapatıyor (bizim müdahaleye gerek yok)
+        // 2. Yeni Sekme: Bilerek açık kalmasını istiyorlar
+        //    → Tarayıcıya dönüp bakıldığında hangi PR'larda müdahaleye başlanmış görmek için
+        //    → Kullanıcılar sekmeleri manuel kapatacak
 
-        logMessage(`✅ ${request.prCode} - Popup işlemi tamamlandı`);
+        logMessage(
+          `✅ ${request.prCode} - Popup işlemi tamamlandı (açık kalıyor)`
+        );
         sendResponse({ success: true, message: "Popup işlendi" });
       } else {
         logMessage(
           `❌ ${request.prCode} - Popup'ta 'Müdahaleye Başla' butonu bulunamadı`
         );
+
+        // NOT: Başarısız durumda da popup'u kapatmıyoruz
+        // Kullanıcı manuel olarak kontrol edip kapatabilir
 
         sendResponse({
           success: false,
@@ -905,16 +914,18 @@ async function processSinglePR(pr, index, total) {
   }
 
   // PR satırına tıkla
-  logMessage(`👆 ${pr.code} satırına tıklanıyor (yeni pencere açılacak)`);
+  logMessage(`👆 ${pr.code} satırına tıklanıyor (yeni pencere/sekme açılacak)`);
   pr.cell.click();
 
-  // Yeni pencere açılmasını ve işlenmesini bekle
+  // Yeni pencere/sekme açılmasını ve işlenmesini bekle
   // Background + popup content script bu işi halledecek
-  // Popup otomatik kapanacak (site kendisi kapatır)
-  logMessage(`⏳ ${pr.code} için popup penceresi işleniyor...`);
-  await waitFor(30000); // Popup açılma + işlem + otomatik kapanma süresi
+  // NOT: Popup kapatılmıyor çünkü:
+  // - Yeni pencere: Sistem kendisi kapatır
+  // - Yeni sekme: Kullanıcı hangi PR'larda müdahaleye başlandığını görmek istiyor
+  logMessage(`⏳ ${pr.code} için popup işleniyor...`);
+  await waitFor(10000); // Popup açılma + "Müdahaleye Başla" butonuna basma süresi
 
-  logMessage(`✅ ${pr.code} popup işlemi tamamlandı`);
+  logMessage(`✅ ${pr.code} işlemi tamamlandı, sonraki PR'a geçiliyor`);
 }
 
 async function highlightAndScrollToPR(pr) {

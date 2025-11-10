@@ -65,7 +65,7 @@ function initializePopup() {
 
   // Show initial message
   setTimeout(() => {
-    addLog("TK SmartFlow v2.3 hazır - Özelleştirilebilir ayarlar aktif");
+    addLog("TK SmartFlow v2.4 hazır - Hibrit açılma desteği (Sekme/Pencere)");
   }, 500);
 }
 
