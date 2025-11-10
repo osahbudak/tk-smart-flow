@@ -26,6 +26,7 @@ const messageHandlers = {
   getStats: handleGetStatsRequest,
   incrementProcessed: handleIncrementProcessedRequest,
   waitForPopup: handleWaitForPopupRequest,
+  closeTab: handleCloseTabRequest,
 };
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -155,6 +156,39 @@ function handleWaitForPopupRequest(request, sendResponse) {
 
     sendResponse({ success: true });
   }, 0);
+  return true; // Async response
+}
+
+function handleCloseTabRequest(request, sendResponse) {
+  const tabId = request.tabId;
+  console.log(`🗑️ Sekme kapatma isteği alındı: ${tabId}`);
+
+  if (!tabId) {
+    console.error("❌ Tab ID sağlanmadı");
+    sendResponse({ success: false, message: "Tab ID required" });
+    return false;
+  }
+
+  chrome.tabs.remove(tabId, () => {
+    if (chrome.runtime.lastError) {
+      console.error(
+        `❌ Sekme kapatma hatası (${tabId}):`,
+        chrome.runtime.lastError.message
+      );
+      sendResponse({
+        success: false,
+        message: chrome.runtime.lastError.message,
+      });
+    } else {
+      console.log(`✅ Sekme kapatıldı: ${tabId}`);
+      // checkedTabIds'den temizle
+      if (checkedTabIds.has(tabId)) {
+        checkedTabIds.delete(tabId);
+      }
+      sendResponse({ success: true });
+    }
+  });
+
   return true; // Async response
 }
 
@@ -415,7 +449,7 @@ function waitTabCompleteAndRun(tabId, timeoutMs = 15000) {
 // =====================
 // Event Listeners
 // =====================
-// Yeni pencere açılma dinleyicisi - PR detay popup'ları için
+// Yeni pencere açılma dinleyicisi - PR detay popup'ları için (YENİ PENCERE SENARYOSU)
 chrome.windows.onCreated.addListener(async (window) => {
   if (!waitingForPopup) {
     return;
@@ -471,6 +505,7 @@ chrome.windows.onCreated.addListener(async (window) => {
         originTabId: popupOriginTabId,
         popupWindowId: window.id,
         prCode: currentPRCode,
+        isNewWindow: true, // Yeni pencere olduğunu belirt
       },
       (response) => {
         if (chrome.runtime.lastError) {
@@ -485,6 +520,83 @@ chrome.windows.onCreated.addListener(async (window) => {
     );
   } else {
     console.log("⚠️ 10 denemede THY PR popup bulunamadı");
+  }
+});
+
+// Yeni sekme açılma dinleyicisi - PR detay popup'ları için (YENİ SEKME SENARYOSU)
+chrome.tabs.onCreated.addListener((tab) => {
+  if (!waitingForPopup) {
+    return;
+  }
+
+  console.log("📑 Yeni sekme tespit edildi:", tab.id);
+  console.log("📍 Sekme URL (onCreated):", tab.url || "henüz yüklenmedi");
+
+  // Sekme URL'si henüz yüklenmemiş olabilir, onUpdated'de kontrol edeceğiz
+});
+
+// Sekme güncelleme dinleyicisi - YENİ SEKME senaryosunda URL kontrolü
+let checkedTabIds = new Set(); // Aynı sekmeyi tekrar kontrol etmemek için
+
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  // Sadece popup bekleme modundayken ve URL tam yüklendiğinde çalış
+  if (!waitingForPopup || changeInfo.status !== "complete") {
+    return;
+  }
+
+  // Bu sekmeyi daha önce kontrol ettiysek, tekrar kontrol etme
+  if (checkedTabIds.has(tabId)) {
+    return;
+  }
+
+  console.log(
+    `📑 Sekme güncellendi (${tabId}): status=${changeInfo.status}, URL=${tab.url}`
+  );
+
+  // THY PR detay sayfası mı ve IS_POPUP=1 var mı kontrol et
+  if (
+    tab.url &&
+    tab.url.includes("turuncuhat.thy.com") &&
+    tab.url.includes("IS_POPUP=1")
+  ) {
+    console.log(`✅ THY PR detay popup sekmesi bulundu (YENİ SEKME): ${tabId}`);
+    console.log("📍 Popup URL:", tab.url);
+
+    // Bu sekmeyi kontrol edildi olarak işaretle
+    checkedTabIds.add(tabId);
+
+    // Kilidi kaldır
+    waitingForPopup = false;
+
+    // Ekstra güvenlik için kısa bekle (content script yüklensin)
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Content script'e mesaj gönder (çözüldü butonuna bas)
+    chrome.tabs.sendMessage(
+      tabId,
+      {
+        action: "clickInterventionButtonInPopup",
+        originTabId: popupOriginTabId,
+        popupWindowId: null, // Yeni sekme olduğu için window ID yok
+        prCode: currentPRCode,
+        isNewWindow: false, // Yeni sekme olduğunu belirt
+      },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            "❌ Popup sekmesine mesaj gönderilemedi:",
+            chrome.runtime.lastError.message
+          );
+          // Hata durumunda işaretlemeyi kaldır ki tekrar deneyebilsin
+          checkedTabIds.delete(tabId);
+        } else {
+          console.log(
+            "✅ Popup sekmesine mesaj gönderildi (YENİ SEKME):",
+            response
+          );
+        }
+      }
+    );
   }
 });
 

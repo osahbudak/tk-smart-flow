@@ -254,12 +254,14 @@ function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
   console.log("📍 Origin Tab ID:", request.originTabId);
   console.log("📍 Popup Window ID:", request.popupWindowId);
   console.log("📍 PR Kodu:", request.prCode);
+  console.log("📍 Yeni Pencere mi:", request.isNewWindow);
 
   // Popup sayfasında "Müdahaleye Başla" butonunu bul ve tıkla
   (async () => {
     try {
+      const windowType = request.isNewWindow ? "pencerede" : "sekmede";
       logMessage(
-        `🪟 ${request.prCode} - Popup pencerede 'Müdahaleye Başla' butonu aranıyor...`
+        `🪟 ${request.prCode} - Popup ${windowType} 'Müdahaleye Başla' butonu aranıyor...`
       );
 
       // Sayfa tam yüklenene kadar bekle
@@ -275,9 +277,45 @@ function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
         // PR sayacını artır
         chrome.runtime.sendMessage({ action: "incrementProcessed" });
 
-        // Popup otomatik kapanacak (site kendisi kapatır)
-        // 5 saniye bekle (popup kapanana kadar)
-        await waitFor(5000);
+        // Popup'u kapat
+        if (request.isNewWindow && request.popupWindowId) {
+          // Yeni pencere senaryosu - pencereyi kapat
+          logMessage(`🪟 ${request.prCode} - Popup penceresi kapatılıyor...`);
+          await waitFor(2000);
+          try {
+            await chrome.windows.remove(request.popupWindowId);
+            logMessage(`✅ ${request.prCode} - Popup penceresi kapatıldı`);
+          } catch (e) {
+            console.log("⚠️ Popup penceresi zaten kapatılmış olabilir:", e);
+          }
+        } else {
+          // Yeni sekme senaryosu - sekmeyi kapat
+          logMessage(`📑 ${request.prCode} - Popup sekmesi kapatılıyor...`);
+          await waitFor(2000);
+          try {
+            // Mevcut sekmeyi kapat (popup sekmesi) - background'a mesaj gönder
+            const currentTab = await chrome.runtime.sendMessage({
+              action: "getCurrentTabId",
+            });
+            if (currentTab && currentTab.tabId) {
+              const closeResult = await chrome.runtime.sendMessage({
+                action: "closeTab",
+                tabId: currentTab.tabId,
+              });
+              if (closeResult && closeResult.success) {
+                logMessage(`✅ ${request.prCode} - Popup sekmesi kapatıldı`);
+              } else {
+                logMessage(`⚠️ ${request.prCode} - Popup sekmesi kapatılamadı`);
+              }
+            } else {
+              logMessage(
+                `⚠️ ${request.prCode} - Popup sekmesi kapatılamadı (Tab ID bulunamadı)`
+              );
+            }
+          } catch (e) {
+            console.log("⚠️ Popup sekmesi zaten kapatılmış olabilir:", e);
+          }
+        }
 
         logMessage(`✅ ${request.prCode} - Popup işlemi tamamlandı`);
         sendResponse({ success: true, message: "Popup işlendi" });
@@ -285,6 +323,29 @@ function handleClickInterventionButtonInPopupRequest(request, sendResponse) {
         logMessage(
           `❌ ${request.prCode} - Popup'ta 'Müdahaleye Başla' butonu bulunamadı`
         );
+
+        // Başarısız durumda da popup'u kapat
+        if (request.isNewWindow && request.popupWindowId) {
+          try {
+            await chrome.windows.remove(request.popupWindowId);
+          } catch (e) {
+            // Sessizce geç
+          }
+        } else {
+          try {
+            const currentTab = await chrome.runtime.sendMessage({
+              action: "getCurrentTabId",
+            });
+            if (currentTab && currentTab.tabId) {
+              await chrome.runtime.sendMessage({
+                action: "closeTab",
+                tabId: currentTab.tabId,
+              });
+            }
+          } catch (e) {
+            // Sessizce geç
+          }
+        }
 
         sendResponse({
           success: false,
@@ -468,7 +529,7 @@ function detectPageType() {
   }
 
   // Detay sayfası kontrolü
-  if (content.includes("Müdahaleye Başla")) {
+  if (content.includes("Çözüldü")) {
     return PAGE_TYPES.DETAIL;
   }
 
@@ -764,7 +825,7 @@ async function scanForPRs() {
       const prCode = match[0];
       const assigned = row.querySelector("td:nth-child(8) span");
 
-      if (assigned && assigned.textContent !== "") {
+      if (assigned && assigned.textContent === "") {
         processedSkipped++;
         LOG(`⏭️ ${prCode} zaten işlenmiş, atlanıyor`);
         continue;
@@ -905,12 +966,12 @@ async function processSinglePR(pr, index, total) {
   }
 
   // PR satırına tıkla
-  logMessage(`👆 ${pr.code} satırına tıklanıyor (yeni pencere açılacak)`);
+  logMessage(`👆 ${pr.code} satırına tıklanıyor (yeni pencere/sekme açılacak)`);
   pr.cell.click();
 
-  // Yeni pencere açılmasını ve işlenmesini bekle
+  // Yeni pencere/sekme açılmasını ve işlenmesini bekle
   // Background + popup content script bu işi halledecek
-  // Popup otomatik kapanacak (site kendisi kapatır)
+  // Popup otomatik kapanacak
   logMessage(`⏳ ${pr.code} için popup penceresi işleniyor...`);
   await waitFor(30000); // Popup açılma + işlem + otomatik kapanma süresi
 
@@ -934,7 +995,7 @@ function findInterventionButton() {
     const text = button.textContent?.toLowerCase() || "";
     const isVisible = button.offsetParent !== null && !button.disabled;
 
-    if (isVisible && text.includes("müdahaleye başla")) {
+    if (isVisible && text.includes("çözüldü")) {
       return button;
     }
   }
