@@ -477,7 +477,7 @@ function detectPageType() {
   }
 
   // Detay sayfası kontrolü
-  if (content.includes("Çözüldü")) {
+  if (content.includes("Müdahaleye Başla")) {
     return PAGE_TYPES.DETAIL;
   }
 
@@ -773,7 +773,7 @@ async function scanForPRs() {
       const prCode = match[0];
       const assigned = row.querySelector("td:nth-child(8) span");
 
-      if (assigned && assigned.textContent === "") {
+      if (assigned && assigned.textContent !== "") {
         processedSkipped++;
         LOG(`⏭️ ${prCode} zaten işlenmiş, atlanıyor`);
         continue;
@@ -945,7 +945,7 @@ function findInterventionButton() {
     const text = button.textContent?.toLowerCase() || "";
     const isVisible = button.offsetParent !== null && !button.disabled;
 
-    if (isVisible && text.includes("çözüldü")) {
+    if (isVisible && text.includes("müdahaleye başla")) {
       return button;
     }
   }
