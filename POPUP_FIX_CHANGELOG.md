@@ -1,10 +1,20 @@
-# 🔥 TK SmartFlow v2.4 - Yeni Sekme & Yeni Pencere Hibrit Desteği
+# 🔥 TK SmartFlow v2.4.1 - Background Timer + Hibrit Açılma Desteği
 
 **Durum:** ✅ **ÇÖZÜLDÜ VE TEST EDİLDİ**
 
 ---
 
-## 🆕 v2.4 Güncellemesi - Hibrit Açılma Desteği
+## 🆕 v2.4.1 Güncellemesi - Background Persistent Timer
+
+### **Yeni Özellik:**
+- ⭐ Chrome alarms API ile persistent background timer
+- ⭐ Sekme arka planda olsa bile çalışmaya devam eder
+- ⭐ Tab throttling bypass - Chrome kısıtlamasını aşar
+- ⭐ Page Visibility API ile akıllı sekme durumu izleme
+
+---
+
+## v2.4 Hibrit Açılma Desteği
 
 ### **Sorun:**
 - Bazı kullanıcılarda PR'lar **yeni pencerede** açılırken, bazı kullanıcılarda **yeni sekmede** açılıyordu
@@ -864,8 +874,8 @@ TK_SmartFlow.analyze(); // Sistem durumu
 
 ---
 
-**TK SmartFlow v2.4** - Hibrit Açılma Desteği ile Güçlendirildi! 🚀
+**TK SmartFlow v2.4.1** - Background Persistent Timer ile Güçlendirildi! 🚀
 
 **Test Durumu:** ✅ Başarıyla test edildi ve çalışıyor
-**Son Güncelleme:** 7 Kasım 2025
+**Son Güncelleme:** 13 Kasım 2025
 **Geliştirici:** Turkish Technology Team

@@ -7,6 +7,8 @@ const CONFIG = {
   TAB_LOAD_TIMEOUT: 20000,
   TARGET_URLS: ["https://turuncuhat.thy.com/*", "https://auth.thy.com/*"],
   BASE_URL: "https://turuncuhat.thy.com/",
+  ALARM_NAME: "tk-smartflow-auto-run",
+  DEFAULT_INTERVAL: 45000, // 45 seconds
 };
 
 // =====================
@@ -16,6 +18,7 @@ let intervalId = null;
 let waitingForPopup = false;
 let popupOriginTabId = null;
 let currentPRCode = null;
+let alarmEnabled = false;
 
 // =====================
 // Message Handlers
@@ -27,6 +30,8 @@ const messageHandlers = {
   incrementProcessed: handleIncrementProcessedRequest,
   waitForPopup: handleWaitForPopupRequest,
   closeTab: handleCloseTabRequest,
+  startPersistentTimer: handleStartPersistentTimerRequest,
+  stopPersistentTimer: handleStopPersistentTimerRequest,
 };
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -711,6 +716,78 @@ async function waitForTabComplete(tabId, maxWait = 15000) {
         console.error(`❌ Sekme ${tabId} kontrol hatası:`, error);
         resolve(false);
       }
-    }, 500);
+    }, 1000);
   });
+}
+
+// =====================
+// Alarm Management - Persistent Background Timer
+// =====================
+
+// Alarm listener - Chrome tarafından otomatik olarak tetiklenir
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === CONFIG.ALARM_NAME) {
+    console.log("⏰ Background alarm tetiklendi:", new Date().toLocaleTimeString());
+    handleAlarmTrigger();
+  }
+});
+
+// Alarm tetiklendiğinde çalışacak fonksiyon
+async function handleAlarmTrigger() {
+  console.log("🔄 Alarm trigger: THY sekmelerini kontrol ediliyor...");
+  
+  try {
+    // THY sekmelerini bul
+    const tabs = await chrome.tabs.query({
+      url: "https://turuncuhat.thy.com/*"
+    });
+
+    if (tabs.length === 0) {
+      console.log("⚠️ THY sekmesi bulunamadı, alarm atlanıyor");
+      return;
+    }
+
+    // İlk THY sekmesine mesaj gönder
+    const targetTab = tabs[0];
+    console.log(`📤 Auto-run mesajı gönderiliyor: Tab ${targetTab.id}`);
+    
+    chrome.tabs.sendMessage(targetTab.id, { action: "autoRunFromAlarm" }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.log("⚠️ Content script'e mesaj gönderilemedi:", chrome.runtime.lastError.message);
+      } else {
+        console.log("✅ Auto-run mesajı başarıyla gönderildi");
+      }
+    });
+  } catch (error) {
+    console.error("❌ Alarm trigger hatası:", error);
+  }
+}
+
+// Persistent timer başlatma
+function handleStartPersistentTimerRequest(request, sendResponse) {
+  const intervalMinutes = (request.interval || CONFIG.DEFAULT_INTERVAL) / 60000; // ms to minutes
+  
+  chrome.alarms.create(CONFIG.ALARM_NAME, {
+    delayInMinutes: intervalMinutes,
+    periodInMinutes: intervalMinutes
+  });
+  
+  alarmEnabled = true;
+  console.log(`⏰ Persistent timer başlatıldı: ${intervalMinutes} dakika aralıkla`);
+  
+  sendResponse({ 
+    success: true, 
+    message: `Persistent timer aktif: ${intervalMinutes} dakika` 
+  });
+  return false;
+}
+
+// Persistent timer durdurma
+function handleStopPersistentTimerRequest(request, sendResponse) {
+  chrome.alarms.clear(CONFIG.ALARM_NAME);
+  alarmEnabled = false;
+  console.log("⏹️ Persistent timer durduruldu");
+  
+  sendResponse({ success: true, message: "Persistent timer durduruldu" });
+  return false;
 }
