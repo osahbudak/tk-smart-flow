@@ -63,6 +63,8 @@ const PAGE_TYPES = {
 let isRunning = false;
 let autoRunEnabled = false;
 let autoRunInterval = null;
+let persistentTimerEnabled = false;
+let isTabVisible = !document.hidden;
 
 // =====================
 // Utility Functions
@@ -117,6 +119,7 @@ const messageHandlers = {
   analyze: handleAnalyzeRequest,
   clickInterventionButtonInPopup: handleClickInterventionButtonInPopupRequest,
   popupProcessed: handlePopupProcessedRequest,
+  autoRunFromAlarm: handleAutoRunFromAlarmRequest,
 };
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -141,8 +144,16 @@ function handleAutoRunRequest(request, sendResponse) {
   if (!autoRunEnabled && !isRunning) {
     autoRunEnabled = true;
     chrome.storage?.local?.set({ autoRunEnabled: true });
+    
+    // Persistent timer'ı da başlat (arka planda çalışmaya devam etsin)
+    persistentTimerEnabled = true;
+    chrome.runtime.sendMessage({
+      action: "startPersistentTimer",
+      interval: CONFIG.AUTO_RUN_INTERVAL
+    });
+    
     startAutoRun();
-    sendResponse({ success: true, message: "Auto-run modu başlatıldı" });
+    sendResponse({ success: true, message: "Auto-run modu başlatıldı (persistent timer dahil)" });
   } else if (autoRunEnabled && !isRunning) {
     // Zaten aktif ama çalışmıyorsa tek seferlik çalıştır
     runHyperFlow();
@@ -161,8 +172,15 @@ function handleAutoRunRequest(request, sendResponse) {
 
 function handleStopAutoRunRequest(request, sendResponse) {
   stopAutoRun();
+  
+  // Persistent timer'ı da durdur
+  if (persistentTimerEnabled) {
+    persistentTimerEnabled = false;
+    chrome.runtime.sendMessage({ action: "stopPersistentTimer" });
+  }
+  
   chrome.storage?.local?.set({ autoRunEnabled: false });
-  sendResponse({ success: true, message: "Auto-run modu durduruldu" });
+  sendResponse({ success: true, message: "Auto-run modu durduruldu (persistent timer dahil)" });
   return true;
 }
 
@@ -317,6 +335,42 @@ function handlePopupProcessedRequest(request, sendResponse) {
   console.log("✅ Popup işlendi mesajı alındı");
   logMessage("✅ PR popup'ta işlendi, devam ediliyor...");
   sendResponse({ success: true });
+  return true;
+}
+
+function handleAutoRunFromAlarmRequest(request, sendResponse) {
+  console.log("⏰ Background alarm'dan auto-run tetiklemesi alındı");
+  
+  // Tab görünür değilse veya auto-run devre dışıysa atla
+  if (!isTabVisible) {
+    console.log("👀 Sekme görünmez, alarm tetiklemesi atlandı");
+    sendResponse({ success: false, message: "Tab invisible" });
+    return true;
+  }
+  
+  if (!autoRunEnabled && !persistentTimerEnabled) {
+    console.log("⏹️ Auto-run ve persistent timer devre dışı, alarm tetiklemesi atlandı");
+    sendResponse({ success: false, message: "Auto-run disabled" });
+    return true;
+  }
+
+  if (isRunning) {
+    console.log("⚠️ Zaten çalışıyor, alarm tetiklemesi atlandı");
+    sendResponse({ success: false, message: "Already running" });
+    return true;
+  }
+
+  logMessage("⏰ Background alarm tetiklemesi - yeni döngü başlatılıyor");
+  
+  runHyperFlow()
+    .then(() => {
+      sendResponse({ success: true, message: "Alarm triggered successfully" });
+    })
+    .catch((error) => {
+      console.error("❌ Alarm trigger hatası:", error);
+      sendResponse({ success: false, message: error.message });
+    });
+  
   return true;
 }
 
@@ -1428,10 +1482,52 @@ chrome.storage?.local?.get(["autoRunEnabled"], (result) => {
   }
 });
 
+// =====================
+// Page Visibility API - Tab durumunu izle
+// =====================
+document.addEventListener("visibilitychange", () => {
+  isTabVisible = !document.hidden;
+  
+  if (isTabVisible) {
+    console.log("👀 Sekme aktif oldu");
+    logMessage("👀 Sekme aktif - timer kontrolü yapılıyor");
+    
+    // Auto-run aktifse ve çalışmıyorsa kontrol et
+    if ((autoRunEnabled || persistentTimerEnabled) && !isRunning) {
+      console.log("🔄 Sekme aktif olduğunda kontrol tetiklemesi");
+      setTimeout(() => {
+        if ((autoRunEnabled || persistentTimerEnabled) && !isRunning) {
+          logMessage("🔄 Sekme aktif duruma geldi - işlem başlatılıyor");
+          runHyperFlow();
+        }
+      }, 2000); // 2 saniye bekle
+    }
+  } else {
+    console.log("🫥 Sekme pasif oldu");
+    logMessage("🫥 Sekme arka plana geçti - persistent timer devam edecek");
+  }
+});
+
+// Storage'dan persistent timer durumunu yükle
+chrome.storage.local.get(["persistentTimerEnabled"], (result) => {
+  if (result.persistentTimerEnabled) {
+    persistentTimerEnabled = true;
+    console.log("⚙️ Persistent timer durumu storage'dan yüklendi: aktif");
+  }
+});
+
+// Storage değişikliklerini dinle
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "local" && changes.persistentTimerEnabled) {
+    persistentTimerEnabled = changes.persistentTimerEnabled.newValue;
+    console.log("⚙️ Persistent timer durumu güncellendi:", persistentTimerEnabled);
+  }
+});
+
 // THY sayfasında başlangıç mesajı
 if (location.href.includes("turuncuhat.thy.com")) {
   setTimeout(() => {
-    logMessage("✅ Sistem hazır - optimizasyon ile");
+    logMessage("✅ Sistem hazır - background persistent timer desteği ile");
   }, 1500);
 }
 

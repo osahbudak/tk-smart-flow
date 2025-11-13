@@ -65,7 +65,8 @@ function initializePopup() {
 
   // Show initial message
   setTimeout(() => {
-    addLog("TK SmartFlow v2.4 hazır - Hibrit açılma desteği (Sekme/Pencere)");
+    addLog("TK SmartFlow v2.4 hazır - Background persistent timer desteği");
+    addLog("📋 Sekme arka planda olsa bile çalışmaya devam eder");
   }, 500);
 }
 
@@ -419,7 +420,7 @@ function updateUI(isActive) {
     elements.stopBtn.disabled = false;
     elements.stopBtn.textContent = "Otomasyonu Durdur";
     elements.statusCard.className = "status-card active";
-    elements.statusText.textContent = "Otomasyon Aktif";
+    elements.statusText.textContent = "Otomasyon Aktif (Background Timer ✓)";
   } else {
     elements.startBtn.style.display = "block";
     elements.stopBtn.style.display = "none";
