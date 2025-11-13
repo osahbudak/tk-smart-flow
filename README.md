@@ -1,6 +1,6 @@
 # 🚀 TK SmartFlow - THY PR Otomasyon Sistemi
 
-**v2.4** - Profesyonel PR kayıt işleme otomasyonu. Hibrit açılma desteği (sekme/pencere) ile evrensel uyumluluk sağlar. Özelleştirilebilir ayarlar ve gelişmiş loglama destekli.
+**v2.4.1** - Profesyonel PR kayıt işleme otomasyonu. Background persistent timer ile sekme arka planda olsa bile kesintisiz çalışma. Hibrit açılma desteği (sekme/pencere) ile evrensel uyumluluk sağlar.
 
 ---
 
@@ -15,14 +15,15 @@
 - ✅ **10 Dakika Güvenlik Döngüsü**: Background'da sürekli çalışır
 - ✅ **Rate Limit Koruması**: 15 saniye bekleme ile güvenli işlem
 
-### 🔥 v2.4 Yeni Özellikler - Hibrit Açılma Desteği
+### 🔥 v2.4.1 Yeni Özellikler - Background Persistent Timer
 
+- ⭐ **Background Timer**: Chrome alarms API ile arka plan timer desteği
+- ⭐ **Tab Bağımsız**: Sekme görünmez olsa bile çalışmaya devam eder
+- ⭐ **Throttling Bypass**: Chrome'un tab throttling kısıtlamasını aşar
+- ⭐ **Page Visibility API**: Sekme aktif/pasif durumu izleme
 - 🆕 **Yeni Sekme Desteği**: PR'lar yeni sekmede açıldığında da otomatik işler
 - 🆕 **Yeni Pencere Desteği**: PR'lar yeni pencerede açıldığında da otomatik işler
-- 🆕 **Otomatik Tespit**: Hangi senaryonun kullanıldığını sistem otomatik belirler
 - 🆕 **Akıllı Kapama**: Sekmede açıldıysa sekmeyi, pencerede açıldıysa pencereyi kapatır
-- 🆕 **Tekrar Kontrol Önleme**: `checkedTabIds` ile performans optimizasyonu
-- 🆕 **Evrensel Uyumluluk**: Tüm kullanıcı konfigürasyonlarında çalışır
 
 ### 🪟 v2.3 ve Önceki Özellikler
 
@@ -305,7 +306,15 @@ tk-smart-flow/
 
 ## 📝 Versiyon Geçmişi
 
-### v2.4 (Mevcut) - Hibrit Açılma Desteği
+### v2.4.1 (Mevcut) - Background Persistent Timer
+
+- ⭐ **YENİ:** Chrome alarms API ile persistent background timer
+- ⭐ **YENİ:** Tab throttling bypass - sekme arka planda da çalışır
+- ⭐ **YENİ:** Page Visibility API entegrasyonu
+- ⭐ **YENİ:** Background service worker alarm listener
+- 🔧 **İYİLEŞTİRME:** Sekme görünmez olduğunda bile kesintisiz çalışma
+
+### v2.4 - Hibrit Açılma Desteği
 
 - 🔥 **YENİ:** Yeni sekme açılma desteği (`chrome.tabs.onCreated` + `chrome.tabs.onUpdated`)
 - 🔥 **YENİ:** Yeni pencere açılma desteği (mevcut `chrome.windows.onCreated`)
@@ -360,6 +369,6 @@ Bu proje THY iç kullanımı için geliştirilmiştir. Öneriler için lütfen i
 
 ---
 
-**TK SmartFlow v2.4** - Turkish Technology © 2025
+**TK SmartFlow v2.4.1** - Turkish Technology © 2025
 _Professional PR Intervention System for THY Operations_
-_Hybrid Tab/Window Support - Universal Compatibility_
+_Background Persistent Timer - Tab Independent Operation_
