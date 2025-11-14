@@ -1,4 +1,4 @@
-# 🔧 TK SmartFlow v2.4.1 - Background Timer Hotfix
+# 🔧 TK SmartFlow v2.4.1 - Background Timer Hotfix (v2.4.2'de geliştirildi)
 
 ## 🚨 Sorunu Tanımlanan Problem
 

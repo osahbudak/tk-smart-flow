@@ -20,6 +20,10 @@ let popupOriginTabId = null;
 let currentPRCode = null;
 let alarmEnabled = false;
 
+// Tab Tracking System - v2.4.2
+let automationOriginTabId = null; // Otomasyon başlatılan ana tab
+let automationManagedTabs = new Set(); // Otomasyonun yönettiği tüm tab'lar (origin + PR popups)
+
 // =====================
 // Message Handlers
 // =====================
@@ -32,6 +36,8 @@ const messageHandlers = {
   closeTab: handleCloseTabRequest,
   startPersistentTimer: handleStartPersistentTimerRequest,
   stopPersistentTimer: handleStopPersistentTimerRequest,
+  isTabAllowed: handleIsTabAllowedRequest,
+  isOriginTab: handleIsOriginTabRequest,
 };
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -522,6 +528,13 @@ chrome.windows.onCreated.addListener(async (window) => {
   }
 
   if (thyTab) {
+    // PR popup tab'ını managed tabs'a ekle
+    if (automationOriginTabId && automationManagedTabs.size > 0) {
+      automationManagedTabs.add(thyTab.id);
+      console.log(`📋 PR popup tab managed'a eklendi: ${thyTab.id}`);
+      console.log(`📋 Yönetilen tab'lar:`, Array.from(automationManagedTabs));
+    }
+    
     // Kilidi kaldır
     waitingForPopup = false;
 
@@ -595,6 +608,13 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
     // Bu sekmeyi kontrol edildi olarak işaretle
     checkedTabIds.add(tabId);
+    
+    // PR popup tab'ını managed tabs'a ekle
+    if (automationOriginTabId && automationManagedTabs.size > 0) {
+      automationManagedTabs.add(tabId);
+      console.log(`📋 PR popup tab managed'a eklendi: ${tabId}`);
+      console.log(`📋 Yönetilen tab'lar:`, Array.from(automationManagedTabs));
+    }
 
     // Kilidi kaldır
     waitingForPopup = false;
@@ -734,30 +754,38 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 // Alarm tetiklendiğinde çalışacak fonksiyon
 async function handleAlarmTrigger() {
-  console.log("🔄 Alarm trigger: THY sekmelerini kontrol ediliyor...");
+  console.log("🔄 Alarm trigger: Origin tab kontrol ediliyor...");
   
   try {
-    // THY sekmelerini bul
-    const tabs = await chrome.tabs.query({
-      url: "https://turuncuhat.thy.com/*"
-    });
-
-    if (tabs.length === 0) {
-      console.log("⚠️ THY sekmesi bulunamadı, alarm atlanıyor");
+    // Origin tab yoksa alarm'ı atla
+    if (!automationOriginTabId) {
+      console.log("⚠️ Origin tab ID yok, alarm atlanıyor");
       return;
     }
 
-    // İlk THY sekmesine mesaj gönder
-    const targetTab = tabs[0];
-    console.log(`📤 Auto-run mesajı gönderiliyor: Tab ${targetTab.id}`);
-    
-    chrome.tabs.sendMessage(targetTab.id, { action: "autoRunFromAlarm" }, (response) => {
-      if (chrome.runtime.lastError) {
-        console.log("⚠️ Content script'e mesaj gönderilemedi:", chrome.runtime.lastError.message);
-      } else {
-        console.log("✅ Auto-run mesajı başarıyla gönderildi");
+    // Origin tab'ın hala açık olduğunu kontrol et
+    try {
+      const tab = await chrome.tabs.get(automationOriginTabId);
+      
+      if (!tab || !tab.url || !tab.url.includes("turuncuhat.thy.com")) {
+        console.log("⚠️ Origin tab kapalı veya THY sayfasında değil, alarm atlanıyor");
+        return;
       }
-    });
+      
+      console.log(`📤 Auto-run mesajı gönderiliyor - Origin Tab ${automationOriginTabId}`);
+      
+      chrome.tabs.sendMessage(automationOriginTabId, { action: "autoRunFromAlarm" }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.log("⚠️ Content script'e mesaj gönderilemedi:", chrome.runtime.lastError.message);
+        } else {
+          console.log("✅ Auto-run mesajı başarıyla gönderildi");
+        }
+      });
+    } catch (tabError) {
+      console.log("⚠️ Origin tab bulunamadı (kapalı olabilir):", tabError.message);
+      // Tab kapalıysa otomasyonu durdur
+      handleStopPersistentTimerRequest({}, () => {});
+    }
   } catch (error) {
     console.error("❌ Alarm trigger hatası:", error);
   }
@@ -766,6 +794,21 @@ async function handleAlarmTrigger() {
 // Persistent timer başlatma
 function handleStartPersistentTimerRequest(request, sendResponse) {
   const intervalMinutes = (request.interval || CONFIG.DEFAULT_INTERVAL) / 60000; // ms to minutes
+  const originTabId = request.originTabId;
+  
+  if (!originTabId) {
+    console.error("❌ Origin tab ID eksik, persistent timer başlatılamıyor");
+    sendResponse({ success: false, message: "Origin tab ID gerekli" });
+    return false;
+  }
+  
+  // Origin tab'ı kaydet ve managed tabs'a ekle
+  automationOriginTabId = originTabId;
+  automationManagedTabs.clear();
+  automationManagedTabs.add(originTabId);
+  
+  console.log(`🎯 Otomasyon başlatıldı - Origin Tab: ${originTabId}`);
+  console.log(`📋 Yönetilen tab'lar:`, Array.from(automationManagedTabs));
   
   chrome.alarms.create(CONFIG.ALARM_NAME, {
     delayInMinutes: intervalMinutes,
@@ -786,8 +829,96 @@ function handleStartPersistentTimerRequest(request, sendResponse) {
 function handleStopPersistentTimerRequest(request, sendResponse) {
   chrome.alarms.clear(CONFIG.ALARM_NAME);
   alarmEnabled = false;
+  
+  // Tab tracking state'ini temizle
+  console.log(`🛑 Otomasyon durduruldu - Origin Tab: ${automationOriginTabId}`);
+  automationOriginTabId = null;
+  automationManagedTabs.clear();
+  console.log("🧹 Tab tracking temizlendi");
+  
   console.log("⏹️ Persistent timer durduruldu");
   
   sendResponse({ success: true, message: "Persistent timer durduruldu" });
   return false;
 }
+
+// Tab izin kontrolü - v2.4.2
+function handleIsTabAllowedRequest(request, sendResponse) {
+  const tabId = request.tabId;
+  
+  if (!tabId) {
+    sendResponse({ allowed: false, reason: "Tab ID yok" });
+    return false;
+  }
+  
+  // Otomasyon aktif değilse tüm tab'lar izinli (normal kullanım)
+  if (!automationOriginTabId || automationManagedTabs.size === 0) {
+    sendResponse({ allowed: true, reason: "Otomasyon aktif değil" });
+    return false;
+  }
+  
+  // Origin tab veya managed tab ise izinli
+  const isAllowed = automationManagedTabs.has(tabId);
+  
+  if (isAllowed) {
+    console.log(`✅ Tab ${tabId} izinli - Otomasyon kapsamında`);
+    sendResponse({ allowed: true, reason: "Origin veya managed tab" });
+  } else {
+    console.log(`⛔ Tab ${tabId} izinli değil - Manuel TK sekmesi (Origin: ${automationOriginTabId})`);
+    sendResponse({ allowed: false, reason: "Manuel açılmış TK sekmesi" });
+  }
+  
+  return false;
+}
+
+// Origin tab kontrolü - v2.4.2
+function handleIsOriginTabRequest(request, sendResponse) {
+  const tabId = request.tabId;
+  
+  if (!tabId) {
+    sendResponse({ isOrigin: false });
+    return false;
+  }
+  
+  const isOrigin = tabId === automationOriginTabId;
+  console.log(`📍 Tab ${tabId} origin tab mı: ${isOrigin} (Origin: ${automationOriginTabId})`);
+  
+  sendResponse({ isOrigin: isOrigin });
+  return false;
+}
+
+// =====================
+// Tab Close Listener - v2.4.2
+// =====================
+
+// Origin tab kapatıldığında otomasyonu durdur
+chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+  console.log(`🗑️ Tab kapatıldı: ${tabId}`);
+  
+  if (tabId === automationOriginTabId) {
+    console.log(`⚠️ Origin tab kapatıldı (${tabId}) - Otomasyon durduruluyor`);
+    
+    // Otomasyonu durdur
+    handleStopPersistentTimerRequest({}, () => {});
+    
+    // Diğer managed tab'lara durdurma mesajı gönder
+    automationManagedTabs.forEach((managedTabId) => {
+      if (managedTabId !== tabId) {
+        chrome.tabs.sendMessage(managedTabId, { action: "stopAutoRun" }, () => {
+          if (chrome.runtime.lastError) {
+            // Tab zaten kapalı olabilir, sessizce geç
+            console.log(`⚠️ Tab ${managedTabId}'e mesaj gönderilemedi`);
+          }
+        });
+      }
+    });
+    
+    console.log("✅ Origin tab kapandığı için otomasyon temizlendi");
+  } else if (automationManagedTabs.has(tabId)) {
+    // Managed tab'lardan biri kapandı (PR popup olabilir)
+    automationManagedTabs.delete(tabId);
+    console.log(`📋 Managed tab kaldırıldı: ${tabId}`);
+    console.log(`📋 Kalan managed tabs:`, Array.from(automationManagedTabs));
+  }
+});
+

@@ -65,6 +65,14 @@ let autoRunEnabled = false;
 let autoRunInterval = null;
 let persistentTimerEnabled = false;
 let isTabVisible = !document.hidden;
+let currentTabId = null; // Bu tab'ın ID'si
+let isOriginTab = false; // Bu tab origin tab mı?
+
+// Timer state for countdown logging
+let countdownStartTime = null;
+let countdownEndTime = null;
+let countdownLastLoggedMinute = null;
+let countdownInitialMinutes = null;
 
 // =====================
 // Utility Functions
@@ -105,6 +113,43 @@ async function getCurrentTabId() {
 // =====================
 if (location.href.includes("turuncuhat.thy.com")) {
   LOG("TK SmartFlow Working Version yüklendi");
+
+  // Tab ID'yi al ve origin tab olup olmadığını kontrol et
+  (async () => {
+    currentTabId = await getCurrentTabId();
+    console.log(`📍 Bu tab'ın ID'si: ${currentTabId}`);
+
+    // Storage'dan origin tab ID'yi oku
+    chrome.storage.local.get(["originTabId"], (result) => {
+      const storedOriginTabId = result.originTabId;
+
+      if (storedOriginTabId && storedOriginTabId === currentTabId) {
+        isOriginTab = true;
+        console.log(
+          `🎯 Bu tab origin tab (Storage'dan restore edildi): ${currentTabId}`
+        );
+      } else {
+        isOriginTab = false;
+        console.log(
+          `🎯 Bu tab origin tab değil. Origin: ${storedOriginTabId}, Current: ${currentTabId}`
+        );
+      }
+
+      // Origin tab ise ve autoRunEnabled ise interval'ı başlat
+      if (isOriginTab) {
+        chrome.storage.local.get(["autoRunEnabled"], (result) => {
+          if (result.autoRunEnabled) {
+            console.log(
+              "🔄 Origin tab restore edildi, auto-run yeniden başlatılıyor"
+            );
+            autoRunEnabled = true;
+            persistentTimerEnabled = true;
+            startAutoRun();
+          }
+        });
+      }
+    });
+  })();
 }
 
 // =====================
@@ -140,20 +185,44 @@ function handlePingRequest(request, sendResponse) {
   return true;
 }
 
-function handleAutoRunRequest(request, sendResponse) {
+async function handleAutoRunRequest(request, sendResponse) {
   if (!autoRunEnabled && !isRunning) {
+    // Tab ID'yi al
+    const tabId = await getCurrentTabId();
+    if (!tabId) {
+      console.error("❌ Tab ID alınamadı, auto-run başlatılamıyor");
+      sendResponse({ success: false, message: "Tab ID alınamadı" });
+      return true;
+    }
+
+    // Bu tab'ı origin tab olarak işaretle
+    currentTabId = tabId;
+    isOriginTab = true;
+
     autoRunEnabled = true;
-    chrome.storage?.local?.set({ autoRunEnabled: true });
-    
-    // Persistent timer'ı da başlat (arka planda çalışmaya devam etsin)
+
+    // Storage'a kaydet (sayfa yenilenmelerinde korunsun)
+    chrome.storage?.local?.set({
+      autoRunEnabled: true,
+      originTabId: tabId, // Origin tab ID'yi de kaydet
+    });
+
+    // Persistent timer'ı da başlat ve origin tab ID'yi gönder
     persistentTimerEnabled = true;
     chrome.runtime.sendMessage({
       action: "startPersistentTimer",
-      interval: CONFIG.AUTO_RUN_INTERVAL
+      interval: CONFIG.AUTO_RUN_INTERVAL,
+      originTabId: tabId, // Origin tab ID'yi kaydet
     });
-    
+
+    console.log(`🎯 Auto-run başlatıldı - Origin Tab ID: ${tabId}`);
+    logMessage(`🎯 Otomasyon bu sekmede başlatıldı (Tab ${tabId})`);
+
     startAutoRun();
-    sendResponse({ success: true, message: "Auto-run modu başlatıldı (persistent timer dahil)" });
+    sendResponse({
+      success: true,
+      message: "Auto-run modu başlatıldı (persistent timer dahil)",
+    });
   } else if (autoRunEnabled && !isRunning) {
     // Zaten aktif ama çalışmıyorsa tek seferlik çalıştır
     runHyperFlow();
@@ -172,15 +241,23 @@ function handleAutoRunRequest(request, sendResponse) {
 
 function handleStopAutoRunRequest(request, sendResponse) {
   stopAutoRun();
-  
+
   // Persistent timer'ı da durdur
   if (persistentTimerEnabled) {
     persistentTimerEnabled = false;
     chrome.runtime.sendMessage({ action: "stopPersistentTimer" });
   }
-  
-  chrome.storage?.local?.set({ autoRunEnabled: false });
-  sendResponse({ success: true, message: "Auto-run modu durduruldu (persistent timer dahil)" });
+
+  // Storage'dan temizle
+  chrome.storage?.local?.set({
+    autoRunEnabled: false,
+    originTabId: null, // Origin tab ID'yi temizle
+  });
+
+  sendResponse({
+    success: true,
+    message: "Auto-run modu durduruldu (persistent timer dahil)",
+  });
   return true;
 }
 
@@ -340,16 +417,18 @@ function handlePopupProcessedRequest(request, sendResponse) {
 
 function handleAutoRunFromAlarmRequest(request, sendResponse) {
   console.log("⏰ Background alarm'dan auto-run tetiklemesi alındı");
-  
+
   // Tab görünür değilse veya auto-run devre dışıysa atla
   if (!isTabVisible) {
     console.log("👀 Sekme görünmez, alarm tetiklemesi atlandı");
     sendResponse({ success: false, message: "Tab invisible" });
     return true;
   }
-  
+
   if (!autoRunEnabled && !persistentTimerEnabled) {
-    console.log("⏹️ Auto-run ve persistent timer devre dışı, alarm tetiklemesi atlandı");
+    console.log(
+      "⏹️ Auto-run ve persistent timer devre dışı, alarm tetiklemesi atlandı"
+    );
     sendResponse({ success: false, message: "Auto-run disabled" });
     return true;
   }
@@ -361,7 +440,7 @@ function handleAutoRunFromAlarmRequest(request, sendResponse) {
   }
 
   logMessage("⏰ Background alarm tetiklemesi - yeni döngü başlatılıyor");
-  
+
   runHyperFlow()
     .then(() => {
       sendResponse({ success: true, message: "Alarm triggered successfully" });
@@ -370,7 +449,7 @@ function handleAutoRunFromAlarmRequest(request, sendResponse) {
       console.error("❌ Alarm trigger hatası:", error);
       sendResponse({ success: false, message: error.message });
     });
-  
+
   return true;
 }
 
@@ -385,6 +464,12 @@ async function runHyperFlow() {
 
   if (!autoRunEnabled) {
     logMessage("⏹️ Auto-run devre dışı, işlem iptal edildi");
+    return;
+  }
+
+  // Origin tab kontrolü
+  if (!isOriginTab) {
+    console.log("⛔ Bu tab origin tab değil, runHyperFlow atlanıyor");
     return;
   }
 
@@ -487,7 +572,8 @@ async function handleUnknownPageFlow() {
 }
 
 async function waitForNextCycle() {
-  const totalSeconds = dynamicConfig.waitTimeout / 1000;
+  const totalWaitTime = dynamicConfig.waitTimeout;
+  const totalSeconds = totalWaitTime / 1000;
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = Math.floor(totalSeconds % 60);
 
@@ -499,23 +585,72 @@ async function waitForNextCycle() {
   }
 
   logMessage(`⏰ PR tarama tamamlandı, ${timeText} bekleyip sayfa yenilenecek`);
-  for (let i = totalSeconds; i > 0; i--) {
+
+  // Başlangıç zamanını kaydet (timestamp-based countdown için)
+  // Global state'e kaydet ki visibilitychange event'inde erişilebilsin
+  countdownStartTime = Date.now();
+  countdownEndTime = countdownStartTime + totalWaitTime;
+  countdownLastLoggedMinute = minutes;
+  countdownInitialMinutes = minutes;
+
+  // İlk log'u göster
+  logMessage(`⏳ Sayfa yenileme: ${minutes} dakika kaldı`);
+
+  while (Date.now() < countdownEndTime) {
     // Otomasyon durduruldu mu kontrol et
     if (!autoRunEnabled) {
       logMessage("⏹️ Otomasyon durduruldu, sayfa yenileme iptal edildi");
+      // Timer state'i temizle
+      countdownStartTime = null;
+      countdownEndTime = null;
+      countdownLastLoggedMinute = null;
+      countdownInitialMinutes = null;
       return;
     }
-    if (i % 30 === 0 || i <= 10) {
-      const minutes = Math.floor(i / 60);
-      const seconds = i % 60;
-      if (minutes > 0) {
-        logMessage(`⏳ Sayfa yenileme: ${minutes}dk ${seconds}sn kaldı`);
-      } else {
-        logMessage(`⏳ Sayfa yenileme: ${seconds} saniye kaldı`);
-      }
+
+    // Kalan süreyi gerçek zamana göre hesapla
+    const remainingMs = countdownEndTime - Date.now();
+    const remainingSeconds = Math.floor(remainingMs / 1000);
+    const currentMinute = Math.floor(remainingSeconds / 60);
+
+    // Son 10 saniyede her saniyeyi geri say
+    if (remainingSeconds > 0 && remainingSeconds <= 10) {
+      logMessage(`⏳ Sayfa yenileme: ${remainingSeconds} saniye kaldı`);
+      await waitFor(1000);
     }
-    await waitFor(1000);
+    // Her yeni dakikada bir log göster (tekrar baskı önleme ile)
+    // Ama sadece tam bir dakika farkı olduysa (59+ saniye geçtiyse)
+    else if (
+      remainingSeconds > 10 &&
+      currentMinute < countdownLastLoggedMinute &&
+      currentMinute > 0
+    ) {
+      // Tam olarak bir dakika geçtiğinden emin ol (en az 55 saniye fark olmalı)
+      const elapsedSeconds = Math.floor(
+        (Date.now() - countdownStartTime) / 1000
+      );
+      const expectedElapsedForThisMinute =
+        (countdownInitialMinutes - currentMinute) * 60;
+
+      // Gerçekten yeterli süre geçtiyse log'la
+      if (elapsedSeconds >= expectedElapsedForThisMinute - 5) {
+        logMessage(`⏳ Sayfa yenileme: ${currentMinute} dakika kaldı`);
+        countdownLastLoggedMinute = currentMinute;
+        await waitFor(5000); // Throttle durumunda yakalamak için 5sn bekle
+      } else {
+        // Henüz yeterli süre geçmemiş, bekle
+        await waitFor(5000);
+      }
+    } else {
+      await waitFor(5000); // Normal durumda 5sn bekle
+    }
   }
+
+  // Timer bitti, state'i temizle
+  countdownStartTime = null;
+  countdownEndTime = null;
+  countdownLastLoggedMinute = null;
+  countdownInitialMinutes = null;
 }
 
 // =====================
@@ -750,6 +885,39 @@ async function waitForRateLimit() {
 // PR Processing
 // =====================
 async function processPRTasks() {
+  // Tab ID validation - v2.4.2
+  const currentTabId = await getCurrentTabId();
+
+  // Background'dan origin/managed tab kontrolü yap
+  const isAllowedTab = await new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      { action: "isTabAllowed", tabId: currentTabId },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            "❌ Tab validation hatası:",
+            chrome.runtime.lastError.message
+          );
+          resolve(false);
+        } else {
+          resolve(response?.allowed || false);
+        }
+      }
+    );
+  });
+
+  if (!isAllowedTab) {
+    console.log(
+      `⛔ Bu tab'da otomasyon çalışmıyor (Tab ${currentTabId}) - Manuel TK sekmesi`
+    );
+    logMessage(`⛔ Bu sekme otomasyon kapsamında değil - Manuel işlem sekmesi`);
+    return;
+  }
+
+  console.log(
+    `✅ Tab validation geçti (Tab ${currentTabId}) - İşlem devam ediyor`
+  );
+
   // Çift çalışmayı engelle
   if (window.processingPRTasks) {
     logMessage("⚠️ PR tarama zaten devam ediyor, atlanıyor");
@@ -920,24 +1088,73 @@ async function processFoundPRs(foundPRs) {
   }
 
   logMessage(`✅ Tüm PR'ler tamamlandı, ${timeText} bekleniyor...`);
-  // Beklemeyi küçük parçalara böl ki dur sinyali kontrol edilebilsin
-  const checkInterval = 5000; // Her 5 saniyede kontrol et
-  const iterations = Math.ceil(totalWaitTime / checkInterval);
-  for (let i = 0; i < iterations; i++) {
+
+  // Başlangıç zamanını kaydet (timestamp-based countdown için)
+  // Global state'e kaydet ki visibilitychange event'inde erişilebilsin
+  countdownStartTime = Date.now();
+  countdownEndTime = countdownStartTime + totalWaitTime;
+  countdownLastLoggedMinute = minutes;
+  countdownInitialMinutes = minutes;
+
+  // İlk log'u göster
+  logMessage(`⏳ Sayfa yenileme: ${minutes} dakika kaldı`);
+
+  while (Date.now() < countdownEndTime) {
+    // Otomasyon durduruldu mu kontrol et
     if (!autoRunEnabled) {
       logMessage("⏹️ Otomasyon durduruldu, sayfa yenileme iptal edildi");
+      // Timer state'i temizle
+      countdownStartTime = null;
+      countdownEndTime = null;
+      countdownLastLoggedMinute = null;
+      countdownInitialMinutes = null;
       return;
     }
-    const waitTime = Math.min(checkInterval, totalWaitTime - i * checkInterval);
-    await waitFor(waitTime);
-    // Her 30 saniyede kalan süreyi logla
-    const remainingTime = totalWaitTime - (i + 1) * checkInterval;
-    if (remainingTime > 0 && remainingTime % 30000 === 0) {
-      const minutes = Math.floor(remainingTime / 60000);
-      const seconds = Math.floor((remainingTime % 60000) / 1000);
-      logMessage(`⏳ Sayfa yenileme: ${minutes}dk ${seconds}sn kaldı`);
+
+    // Kalan süreyi gerçek zamana göre hesapla
+    const remainingMs = countdownEndTime - Date.now();
+    const remainingSeconds = Math.floor(remainingMs / 1000);
+    const currentMinute = Math.floor(remainingSeconds / 60);
+
+    // Son 10 saniyede her saniyeyi geri say
+    if (remainingSeconds > 0 && remainingSeconds <= 10) {
+      logMessage(`⏳ Sayfa yenileme: ${remainingSeconds} saniye kaldı`);
+      await waitFor(1000);
+    }
+    // Her yeni dakikada bir log göster (tekrar baskı önleme ile)
+    // Ama sadece tam bir dakika farkı olduysa (59+ saniye geçtiyse)
+    else if (
+      remainingSeconds > 10 &&
+      currentMinute < countdownLastLoggedMinute &&
+      currentMinute > 0
+    ) {
+      // Tam olarak bir dakika geçtiğinden emin ol (en az 55 saniye fark olmalı)
+      const elapsedSeconds = Math.floor(
+        (Date.now() - countdownStartTime) / 1000
+      );
+      const expectedElapsedForThisMinute =
+        (countdownInitialMinutes - currentMinute) * 60;
+
+      // Gerçekten yeterli süre geçtiyse log'la
+      if (elapsedSeconds >= expectedElapsedForThisMinute - 5) {
+        logMessage(`⏳ Sayfa yenileme: ${currentMinute} dakika kaldı`);
+        countdownLastLoggedMinute = currentMinute;
+        await waitFor(5000); // Throttle durumunda yakalamak için 5sn bekle
+      } else {
+        // Henüz yeterli süre geçmemiş, bekle
+        await waitFor(5000);
+      }
+    } else {
+      await waitFor(5000); // Normal durumda 5sn bekle
     }
   }
+
+  // Timer bitti, state'i temizle
+  countdownStartTime = null;
+  countdownEndTime = null;
+  countdownLastLoggedMinute = null;
+  countdownInitialMinutes = null;
+
   // Sayfa yenileme öncesi son kontrol
   if (!autoRunEnabled) {
     logMessage("⏹️ Otomasyon durduruldu, sayfa yenileme iptal edildi");
@@ -1148,6 +1365,12 @@ window.TK_SmartFlow = {
 // Auto-Run Management
 // =====================
 function startAutoRun() {
+  // Origin tab kontrolü - sadece origin tab'da interval çalıştır
+  if (!isOriginTab) {
+    console.log("⛔ Bu tab origin tab değil, auto-run interval başlatılmıyor");
+    return;
+  }
+
   if (autoRunInterval) {
     clearInterval(autoRunInterval);
   }
@@ -1156,7 +1379,7 @@ function startAutoRun() {
 
   // İlk çalıştırma
   setTimeout(() => {
-    if (autoRunEnabled && !isRunning) {
+    if (autoRunEnabled && !isRunning && isOriginTab) {
       runHyperFlow();
     }
   }, CONFIG.INITIAL_DELAY);
@@ -1166,6 +1389,7 @@ function startAutoRun() {
     if (
       autoRunEnabled &&
       !isRunning &&
+      isOriginTab &&
       location.href.includes("turuncuhat.thy.com")
     ) {
       logMessage("🔄 Auto-run: Yeni döngü başlatılıyor");
@@ -1176,6 +1400,8 @@ function startAutoRun() {
 
 function stopAutoRun() {
   autoRunEnabled = false;
+  isOriginTab = false; // Origin flag'i temizle
+
   if (autoRunInterval) {
     clearInterval(autoRunInterval);
     autoRunInterval = null;
@@ -1487,11 +1713,52 @@ chrome.storage?.local?.get(["autoRunEnabled"], (result) => {
 // =====================
 document.addEventListener("visibilitychange", () => {
   isTabVisible = !document.hidden;
-  
+
   if (isTabVisible) {
     console.log("👀 Sekme aktif oldu");
     logMessage("👀 Sekme aktif - timer kontrolü yapılıyor");
-    
+
+    // Eğer countdown timer aktifse, eksik logları kontrol et ve bas
+    if (
+      countdownStartTime &&
+      countdownEndTime &&
+      Date.now() < countdownEndTime
+    ) {
+      const remainingMs = countdownEndTime - Date.now();
+      const remainingSeconds = Math.floor(remainingMs / 1000);
+      const currentMinute = Math.floor(remainingSeconds / 60);
+
+      // Son 10 saniyenin üzerindeyse dakika loglarını kontrol et
+      if (
+        remainingSeconds > 10 &&
+        currentMinute < countdownLastLoggedMinute &&
+        currentMinute > 0
+      ) {
+        // Kaç dakika geçtiğini hesapla
+        const elapsedSeconds = Math.floor(
+          (Date.now() - countdownStartTime) / 1000
+        );
+
+        // Eksik dakika loglarını bas (son log'lanan dakikadan başlayarak geriye doğru)
+        // Örneğin: 5'ten başladık, 4,3,2 logları atlandıysa, şimdi 1 dakika kaldı
+        // O zaman 4,3,2,1 loglarını basmalıyız (ama sadece gerçekten o süre geçtiyse)
+        for (
+          let minute = countdownLastLoggedMinute - 1;
+          minute >= currentMinute && minute > 0;
+          minute--
+        ) {
+          const expectedElapsedForThisMinute =
+            (countdownInitialMinutes - minute) * 60;
+
+          // Bu dakika için yeterli süre geçtiyse log bas
+          if (elapsedSeconds >= expectedElapsedForThisMinute - 5) {
+            logMessage(`⏳ Sayfa yenileme: ${minute} dakika kaldı`);
+            countdownLastLoggedMinute = minute;
+          }
+        }
+      }
+    }
+
     // Auto-run aktifse ve çalışmıyorsa kontrol et
     if ((autoRunEnabled || persistentTimerEnabled) && !isRunning) {
       console.log("🔄 Sekme aktif olduğunda kontrol tetiklemesi");
@@ -1520,7 +1787,10 @@ chrome.storage.local.get(["persistentTimerEnabled"], (result) => {
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === "local" && changes.persistentTimerEnabled) {
     persistentTimerEnabled = changes.persistentTimerEnabled.newValue;
-    console.log("⚙️ Persistent timer durumu güncellendi:", persistentTimerEnabled);
+    console.log(
+      "⚙️ Persistent timer durumu güncellendi:",
+      persistentTimerEnabled
+    );
   }
 });
 
