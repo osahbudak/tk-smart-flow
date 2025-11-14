@@ -1,6 +1,6 @@
 # 🚀 TK SmartFlow - THY PR Otomasyon Sistemi
 
-**v2.4.1** - Profesyonel PR kayıt işleme otomasyonu. Background persistent timer ile sekme arka planda olsa bile kesintisiz çalışma. Hibrit açılma desteği (sekme/pencere) ile evrensel uyumluluk sağlar.
+**v2.4.2** - Profesyonel PR kayıt işleme otomasyonu. Background persistent timer ile sekme arka planda olsa bile kesintisiz çalışma. Hibrit açılma desteği (sekme/pencere) ile evrensel uyumluluk sağlar. Geliştirilmiş countdown timer ve sekme pasifken eksik log basma özelliği.
 
 ---
 
@@ -15,7 +15,13 @@
 - ✅ **10 Dakika Güvenlik Döngüsü**: Background'da sürekli çalışır
 - ✅ **Rate Limit Koruması**: 15 saniye bekleme ile güvenli işlem
 
-### 🔥 v2.4.1 Yeni Özellikler - Background Persistent Timer
+### 🔥 v2.4.2 Yeni Özellikler - Countdown Timer İyileştirmeleri
+
+- ⭐ **Countdown Timer Bug Fix**: Geri sayım timer'ında dakika geçişleri düzeltildi
+- ⭐ **Sekme Pasifken Log Basma**: Arka plandayken kaçırılan dakika logları aktif olduğunda gösterilir
+- ⭐ **Global Timer State**: Timer durumu global state ile yönetilir, sekme değişimlerinde korunur
+
+### 🔥 v2.4.1 Özellikler - Background Persistent Timer
 
 - ⭐ **Background Timer**: Chrome alarms API ile arka plan timer desteği
 - ⭐ **Tab Bağımsız**: Sekme görünmez olsa bile çalışmaya devam eder
@@ -306,7 +312,14 @@ tk-smart-flow/
 
 ## 📝 Versiyon Geçmişi
 
-### v2.4.1 (Mevcut) - Background Persistent Timer
+### v2.4.2 (Mevcut) - Countdown Timer İyileştirmeleri
+
+- 🐛 **DÜZELTME:** Countdown timer'da dakika geçişi bug'ı düzeltildi (5 saniye → 1 dakika)
+- 🐛 **DÜZELTME:** Sekme pasifken eksik loglar artık aktif olduğunda gösteriliyor
+- ⭐ **YENİ:** Global timer state yönetimi eklendi
+- ⭐ **YENİ:** VisibilityChange event'inde eksik logların otomatik basılması
+
+### v2.4.1 - Background Persistent Timer
 
 - ⭐ **YENİ:** Chrome alarms API ile persistent background timer
 - ⭐ **YENİ:** Tab throttling bypass - sekme arka planda da çalışır
@@ -369,6 +382,6 @@ Bu proje THY iç kullanımı için geliştirilmiştir. Öneriler için lütfen i
 
 ---
 
-**TK SmartFlow v2.4.1** - Turkish Technology © 2025
+**TK SmartFlow v2.4.2** - Turkish Technology © 2025
 _Professional PR Intervention System for THY Operations_
 _Background Persistent Timer - Tab Independent Operation_

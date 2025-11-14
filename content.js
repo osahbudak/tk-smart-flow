@@ -68,6 +68,12 @@ let isTabVisible = !document.hidden;
 let currentTabId = null; // Bu tab'ın ID'si
 let isOriginTab = false; // Bu tab origin tab mı?
 
+// Timer state for countdown logging
+let countdownStartTime = null;
+let countdownEndTime = null;
+let countdownLastLoggedMinute = null;
+let countdownInitialMinutes = null;
+
 // =====================
 // Utility Functions
 // =====================
@@ -581,22 +587,29 @@ async function waitForNextCycle() {
   logMessage(`⏰ PR tarama tamamlandı, ${timeText} bekleyip sayfa yenilenecek`);
 
   // Başlangıç zamanını kaydet (timestamp-based countdown için)
-  const startTime = Date.now();
-  const endTime = startTime + totalWaitTime;
-  let lastLoggedMinute = minutes; // Son log'lanan dakika değeri
+  // Global state'e kaydet ki visibilitychange event'inde erişilebilsin
+  countdownStartTime = Date.now();
+  countdownEndTime = countdownStartTime + totalWaitTime;
+  countdownLastLoggedMinute = minutes;
+  countdownInitialMinutes = minutes;
 
   // İlk log'u göster
   logMessage(`⏳ Sayfa yenileme: ${minutes} dakika kaldı`);
 
-  while (Date.now() < endTime) {
+  while (Date.now() < countdownEndTime) {
     // Otomasyon durduruldu mu kontrol et
     if (!autoRunEnabled) {
       logMessage("⏹️ Otomasyon durduruldu, sayfa yenileme iptal edildi");
+      // Timer state'i temizle
+      countdownStartTime = null;
+      countdownEndTime = null;
+      countdownLastLoggedMinute = null;
+      countdownInitialMinutes = null;
       return;
     }
 
     // Kalan süreyi gerçek zamana göre hesapla
-    const remainingMs = endTime - Date.now();
+    const remainingMs = countdownEndTime - Date.now();
     const remainingSeconds = Math.floor(remainingMs / 1000);
     const currentMinute = Math.floor(remainingSeconds / 60);
 
@@ -609,17 +622,20 @@ async function waitForNextCycle() {
     // Ama sadece tam bir dakika farkı olduysa (59+ saniye geçtiyse)
     else if (
       remainingSeconds > 10 &&
-      currentMinute < lastLoggedMinute &&
+      currentMinute < countdownLastLoggedMinute &&
       currentMinute > 0
     ) {
       // Tam olarak bir dakika geçtiğinden emin ol (en az 55 saniye fark olmalı)
-      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-      const expectedElapsedForThisMinute = (minutes - currentMinute) * 60;
+      const elapsedSeconds = Math.floor(
+        (Date.now() - countdownStartTime) / 1000
+      );
+      const expectedElapsedForThisMinute =
+        (countdownInitialMinutes - currentMinute) * 60;
 
       // Gerçekten yeterli süre geçtiyse log'la
       if (elapsedSeconds >= expectedElapsedForThisMinute - 5) {
         logMessage(`⏳ Sayfa yenileme: ${currentMinute} dakika kaldı`);
-        lastLoggedMinute = currentMinute;
+        countdownLastLoggedMinute = currentMinute;
         await waitFor(5000); // Throttle durumunda yakalamak için 5sn bekle
       } else {
         // Henüz yeterli süre geçmemiş, bekle
@@ -629,6 +645,12 @@ async function waitForNextCycle() {
       await waitFor(5000); // Normal durumda 5sn bekle
     }
   }
+
+  // Timer bitti, state'i temizle
+  countdownStartTime = null;
+  countdownEndTime = null;
+  countdownLastLoggedMinute = null;
+  countdownInitialMinutes = null;
 }
 
 // =====================
@@ -1068,22 +1090,29 @@ async function processFoundPRs(foundPRs) {
   logMessage(`✅ Tüm PR'ler tamamlandı, ${timeText} bekleniyor...`);
 
   // Başlangıç zamanını kaydet (timestamp-based countdown için)
-  const startTime = Date.now();
-  const endTime = startTime + totalWaitTime;
-  let lastLoggedMinute = minutes; // Son log'lanan dakika değeri
+  // Global state'e kaydet ki visibilitychange event'inde erişilebilsin
+  countdownStartTime = Date.now();
+  countdownEndTime = countdownStartTime + totalWaitTime;
+  countdownLastLoggedMinute = minutes;
+  countdownInitialMinutes = minutes;
 
   // İlk log'u göster
   logMessage(`⏳ Sayfa yenileme: ${minutes} dakika kaldı`);
 
-  while (Date.now() < endTime) {
+  while (Date.now() < countdownEndTime) {
     // Otomasyon durduruldu mu kontrol et
     if (!autoRunEnabled) {
       logMessage("⏹️ Otomasyon durduruldu, sayfa yenileme iptal edildi");
+      // Timer state'i temizle
+      countdownStartTime = null;
+      countdownEndTime = null;
+      countdownLastLoggedMinute = null;
+      countdownInitialMinutes = null;
       return;
     }
 
     // Kalan süreyi gerçek zamana göre hesapla
-    const remainingMs = endTime - Date.now();
+    const remainingMs = countdownEndTime - Date.now();
     const remainingSeconds = Math.floor(remainingMs / 1000);
     const currentMinute = Math.floor(remainingSeconds / 60);
 
@@ -1096,17 +1125,20 @@ async function processFoundPRs(foundPRs) {
     // Ama sadece tam bir dakika farkı olduysa (59+ saniye geçtiyse)
     else if (
       remainingSeconds > 10 &&
-      currentMinute < lastLoggedMinute &&
+      currentMinute < countdownLastLoggedMinute &&
       currentMinute > 0
     ) {
       // Tam olarak bir dakika geçtiğinden emin ol (en az 55 saniye fark olmalı)
-      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-      const expectedElapsedForThisMinute = (minutes - currentMinute) * 60;
+      const elapsedSeconds = Math.floor(
+        (Date.now() - countdownStartTime) / 1000
+      );
+      const expectedElapsedForThisMinute =
+        (countdownInitialMinutes - currentMinute) * 60;
 
       // Gerçekten yeterli süre geçtiyse log'la
       if (elapsedSeconds >= expectedElapsedForThisMinute - 5) {
         logMessage(`⏳ Sayfa yenileme: ${currentMinute} dakika kaldı`);
-        lastLoggedMinute = currentMinute;
+        countdownLastLoggedMinute = currentMinute;
         await waitFor(5000); // Throttle durumunda yakalamak için 5sn bekle
       } else {
         // Henüz yeterli süre geçmemiş, bekle
@@ -1116,6 +1148,12 @@ async function processFoundPRs(foundPRs) {
       await waitFor(5000); // Normal durumda 5sn bekle
     }
   }
+
+  // Timer bitti, state'i temizle
+  countdownStartTime = null;
+  countdownEndTime = null;
+  countdownLastLoggedMinute = null;
+  countdownInitialMinutes = null;
 
   // Sayfa yenileme öncesi son kontrol
   if (!autoRunEnabled) {
@@ -1679,6 +1717,47 @@ document.addEventListener("visibilitychange", () => {
   if (isTabVisible) {
     console.log("👀 Sekme aktif oldu");
     logMessage("👀 Sekme aktif - timer kontrolü yapılıyor");
+
+    // Eğer countdown timer aktifse, eksik logları kontrol et ve bas
+    if (
+      countdownStartTime &&
+      countdownEndTime &&
+      Date.now() < countdownEndTime
+    ) {
+      const remainingMs = countdownEndTime - Date.now();
+      const remainingSeconds = Math.floor(remainingMs / 1000);
+      const currentMinute = Math.floor(remainingSeconds / 60);
+
+      // Son 10 saniyenin üzerindeyse dakika loglarını kontrol et
+      if (
+        remainingSeconds > 10 &&
+        currentMinute < countdownLastLoggedMinute &&
+        currentMinute > 0
+      ) {
+        // Kaç dakika geçtiğini hesapla
+        const elapsedSeconds = Math.floor(
+          (Date.now() - countdownStartTime) / 1000
+        );
+
+        // Eksik dakika loglarını bas (son log'lanan dakikadan başlayarak geriye doğru)
+        // Örneğin: 5'ten başladık, 4,3,2 logları atlandıysa, şimdi 1 dakika kaldı
+        // O zaman 4,3,2,1 loglarını basmalıyız (ama sadece gerçekten o süre geçtiyse)
+        for (
+          let minute = countdownLastLoggedMinute - 1;
+          minute >= currentMinute && minute > 0;
+          minute--
+        ) {
+          const expectedElapsedForThisMinute =
+            (countdownInitialMinutes - minute) * 60;
+
+          // Bu dakika için yeterli süre geçtiyse log bas
+          if (elapsedSeconds >= expectedElapsedForThisMinute - 5) {
+            logMessage(`⏳ Sayfa yenileme: ${minute} dakika kaldı`);
+            countdownLastLoggedMinute = minute;
+          }
+        }
+      }
+    }
 
     // Auto-run aktifse ve çalışmıyorsa kontrol et
     if ((autoRunEnabled || persistentTimerEnabled) && !isRunning) {

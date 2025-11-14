@@ -186,6 +186,6 @@ Her sekmeyi teker teker kapat (Ctrl+W)
 
 ---
 
-**TK SmartFlow v2.4.1** - Akıllı Popup Yönetimi
+**TK SmartFlow v2.4.2** - Akıllı Popup Yönetimi
 _Her iki senaryoda da mükemmel çalışır!_ 🚀
 

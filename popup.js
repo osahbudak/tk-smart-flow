@@ -65,7 +65,7 @@ function initializePopup() {
 
   // Show initial message
   setTimeout(() => {
-    addLog("TK SmartFlow v2.4.1 hazır - Background persistent timer desteği");
+    addLog("TK SmartFlow v2.4.2 hazır - Countdown timer iyileştirmeleri ile");
     addLog("📋 Sekme arka planda olsa bile çalışmaya devam eder");
   }, 500);
 }

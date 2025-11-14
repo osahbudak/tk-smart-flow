@@ -1,6 +1,16 @@
-# 🔥 TK SmartFlow v2.4.1 - Background Timer + Hibrit Açılma Desteği
+# 🔥 TK SmartFlow v2.4.2 - Countdown Timer İyileştirmeleri
 
 **Durum:** ✅ **ÇÖZÜLDÜ VE TEST EDİLDİ**
+
+---
+
+## 🆕 v2.4.2 Güncellemesi - Countdown Timer İyileştirmeleri
+
+### **Yeni Özellikler:**
+- 🐛 **DÜZELTME:** Countdown timer'da dakika geçişi bug'ı düzeltildi (5 saniye yerine tam 1 dakika bekliyor)
+- 🐛 **DÜZELTME:** Sekme pasifken eksik loglar artık aktif olduğunda gösteriliyor
+- ⭐ **YENİ:** Global timer state yönetimi (`countdownStartTime`, `countdownEndTime`, `countdownLastLoggedMinute`)
+- ⭐ **YENİ:** VisibilityChange event'inde eksik dakika loglarının otomatik basılması
 
 ---
 
@@ -874,7 +884,7 @@ TK_SmartFlow.analyze(); // Sistem durumu
 
 ---
 
-**TK SmartFlow v2.4.1** - Background Persistent Timer ile Güçlendirildi! 🚀
+**TK SmartFlow v2.4.2** - Countdown Timer İyileştirmeleri ile Güçlendirildi! 🚀
 
 **Test Durumu:** ✅ Başarıyla test edildi ve çalışıyor
 **Son Güncelleme:** 13 Kasım 2025

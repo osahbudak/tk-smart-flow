@@ -283,5 +283,5 @@ Bu özellik için gerekli permission:
 
 ---
 
-**TK SmartFlow v2.4.1** - Otomatik Content Script Injection
+**TK SmartFlow v2.4.2** - Otomatik Content Script Injection
 _Kullanıcı hiçbir şey fark etmeden her şey çalışır!_ ✨
