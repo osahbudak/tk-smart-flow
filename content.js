@@ -6,7 +6,7 @@
 // Constants & Configuration
 // =====================
 const CONFIG = {
-  MAX_RECORDS: 15, // Sadece 15 PR kontrol et - zaten en güncele göre sıralı
+  MAX_RECORDS: 15, // Sadece 15 PR kontrol et - zaten en son güncellenenlere göre sıralı
   WAIT_TIMEOUT: 300000, // 5 minutes (default - storage'dan okunacak)
   RATE_LIMIT_DELAY: 15000, // 15 seconds
   AUTO_RUN_INTERVAL: 45000, // 45 seconds
@@ -933,7 +933,7 @@ async function processPRTasks() {
     await waitForTableLoad();
 
     // Sıralama işlemini garantiye al
-    const sorted = await sortByCreatedDateDescending();
+    const sorted = await sortByLastModifiedDateDescending();
     if (!sorted) {
       logMessage(
         "❌ Sıralama işlemi başarısız olduğu için PR işlemeye geçilmiyor."
@@ -1337,13 +1337,13 @@ window.TK_SmartFlow = {
 
   testSort: async () => {
     logMessage("🧪 Sıralama testi başlatılıyor...");
-    const result = await sortByCreatedDateDescending();
+    const result = await sortByLastModifiedDateDescending();
     logMessage(`🧪 Sıralama test sonucu: ${result ? "BAŞARILI" : "BAŞARISIZ"}`);
     return result;
   },
 
   debugSort: () => {
-    const th = document.querySelector('th[sort="m_created_dt"]');
+    const th = document.querySelector('th[sort="m_last_mod_dt"]');
     if (th) {
       console.log("🔍 Sıralama elementi:", th);
       console.log("🔍 Class:", th.className);
@@ -1438,23 +1438,25 @@ function waitUntilVisible(timeoutMs = 5000) {
 // =====================
 // Table Sorting Utility
 // =====================
-async function sortByCreatedDateDescending(maxAttempts = 3) {
+async function sortByLastModifiedDateDescending(maxAttempts = 3) {
   // Daha uzun bekle - sayfa tam yüklensin
   await waitFor(1000);
 
   // Element bulma fonksiyonu - her seferinde fresh element bul
-  function findCreatedDateElement() {
-    return document.querySelector('th[sort="m_created_dt"]');
+  function findLastModifiedDateElement() {
+    return document.querySelector('th[sort="m_last_mod_dt"]');
   }
 
-  let createdDateTh = findCreatedDateElement();
-  if (!createdDateTh) {
-    logMessage('❌ "Oluşturma Tarihi" başlığı bulunamadı, sıralama atlandı');
+  let lastModifiedDateTh = findLastModifiedDateElement();
+  if (!lastModifiedDateTh) {
+    logMessage(
+      '❌ "Son Güncellenme Tarihi" başlığı bulunamadı, sıralama atlandı'
+    );
     return false;
   }
 
   logMessage(
-    '🔽 Sıralama: "Oluşturma Tarihi" başlığı bulundu, tıklama hazırlığı'
+    '🔽 Sıralama: "Son Güncellenme Tarihi" başlığı bulundu, tıklama hazırlığı'
   );
 
   // HTML yapısını debug et
@@ -1466,7 +1468,7 @@ async function sortByCreatedDateDescending(maxAttempts = 3) {
     );
   }
 
-  debugElementStructure(createdDateTh, "İlk durum");
+  debugElementStructure(lastModifiedDateTh, "İlk durum");
 
   let attempt = 0;
   let sorted = false;
@@ -1498,7 +1500,7 @@ async function sortByCreatedDateDescending(maxAttempts = 3) {
     return { isDesc, isAsc, className, sortof };
   }
 
-  const currentState = getCurrentSortState(createdDateTh);
+  const currentState = getCurrentSortState(lastModifiedDateTh);
   logMessage(
     `🔽 Sıralama durumu: class="${currentState.className}", sortof="${currentState.sortof}"`
   );
@@ -1514,30 +1516,32 @@ async function sortByCreatedDateDescending(maxAttempts = 3) {
 
   // Eğer zaten DESC sıralamadaysa, sıralama yapmaya gerek yok
   if (currentState.isDesc) {
-    logMessage("✅ Tablo zaten DESC sıralamada, en yeni kayıtlar yukarıda");
+    logMessage(
+      "✅ Tablo zaten DESC sıralamada, en son güncellenen kayıtlar yukarıda"
+    );
     return true;
   }
 
   while (attempt < maxAttempts && !sorted) {
     logMessage(
-      `🔽 Sıralama: "Oluşturma Tarihi" başlığına tıklama (deneme ${
+      `🔽 Sıralama: "Son Güncellenme Tarihi" başlığına tıklama (deneme ${
         attempt + 1
       })`
     );
 
     // Her tıklamada fresh element bul
-    createdDateTh = findCreatedDateElement();
-    if (!createdDateTh) {
+    lastModifiedDateTh = findLastModifiedDateElement();
+    if (!lastModifiedDateTh) {
       logMessage("❌ Element kayboldu, sıralama iptal ediliyor");
       break;
     }
 
     // Tıklanacak elementi bul
-    let clickable = createdDateTh.querySelector("button, a, span");
-    if (!clickable) clickable = createdDateTh;
+    let clickable = lastModifiedDateTh.querySelector("button, a, span");
+    if (!clickable) clickable = lastModifiedDateTh;
 
     // Tıklama öncesi durumu kaydet
-    const beforeState = getCurrentSortState(createdDateTh);
+    const beforeState = getCurrentSortState(lastModifiedDateTh);
     logMessage(
       `🔽 Tıklama öncesi: class="${beforeState.className}", sortof="${beforeState.sortof}"`
     );
@@ -1550,7 +1554,7 @@ async function sortByCreatedDateDescending(maxAttempts = 3) {
     await waitFor(2000);
 
     // Fresh element bul - HTML değişmiş olabilir
-    let currentElement = findCreatedDateElement();
+    let currentElement = findLastModifiedDateElement();
     if (currentElement) {
       debugElementStructure(
         currentElement,
@@ -1560,7 +1564,7 @@ async function sortByCreatedDateDescending(maxAttempts = 3) {
 
     // Orta bekle ve tekrar kontrol et
     await waitFor(10000);
-    currentElement = findCreatedDateElement();
+    currentElement = findLastModifiedDateElement();
     if (currentElement) {
       debugElementStructure(
         currentElement,
@@ -1572,7 +1576,7 @@ async function sortByCreatedDateDescending(maxAttempts = 3) {
     await waitFor(18000); // Toplam 30 saniye
 
     // Final element ve durumu kontrol et
-    currentElement = findCreatedDateElement();
+    currentElement = findLastModifiedDateElement();
     if (!currentElement) {
       logMessage("❌ Final element bulunamadı");
       break;
@@ -1603,7 +1607,7 @@ async function sortByCreatedDateDescending(maxAttempts = 3) {
     if (afterState.isDesc) {
       sorted = true;
       logMessage(
-        "✅ Sıralama işlemi başarılı, en yeni kayıtlar yukarıda (DESC sıralama)"
+        "✅ Sıralama işlemi başarılı, en son güncellenen kayıtlar yukarıda (DESC sıralama)"
       );
       break;
     }
@@ -1618,7 +1622,7 @@ async function sortByCreatedDateDescending(maxAttempts = 3) {
       await waitFor(2000);
 
       // Fresh element bul
-      const refreshedTh = findCreatedDateElement();
+      const refreshedTh = findLastModifiedDateElement();
       if (refreshedTh) {
         let refreshedClickable = refreshedTh.querySelector("button, a, span");
         if (!refreshedClickable) refreshedClickable = refreshedTh;
@@ -1629,7 +1633,7 @@ async function sortByCreatedDateDescending(maxAttempts = 3) {
         // İkinci tıklama sonrası bekle
         await waitFor(15000);
 
-        const finalElement = findCreatedDateElement();
+        const finalElement = findLastModifiedDateElement();
         if (finalElement) {
           const finalState = getCurrentSortState(finalElement);
 
@@ -1651,11 +1655,11 @@ async function sortByCreatedDateDescending(maxAttempts = 3) {
       if (firstRowAfter) {
         const dateText = firstRowAfter.textContent.trim();
         logMessage(`🔽 İlk satırdaki tarih: ${dateText}`);
-        // Eğer 2025 yılından bir tarih varsa büyük ihtimalle yeni kayıtlar üstte
+        // Eğer 2025 yılından bir tarih varsa büyük ihtimalle son güncellenen kayıtlar üstte
         if (dateText.includes("2025")) {
           sorted = true;
           logMessage(
-            "✅ Sıralama işlemi başarılı, yeni tarihli kayıtlar yukarıda"
+            "✅ Sıralama işlemi başarılı, son güncellenen kayıtlar yukarıda"
           );
           break;
         }
@@ -1674,10 +1678,10 @@ async function sortByCreatedDateDescending(maxAttempts = 3) {
       await waitFor(5000);
 
       // Element referansını yenile - HTML değişmiş olabilir
-      const newCreatedDateTh = findCreatedDateElement();
-      if (newCreatedDateTh) {
+      const newLastModifiedDateTh = findLastModifiedDateElement();
+      if (newLastModifiedDateTh) {
         logMessage("🔄 Element referansı yenilendi");
-        debugElementStructure(newCreatedDateTh, "Yenilenen element");
+        debugElementStructure(newLastModifiedDateTh, "Yenilenen element");
       } else {
         logMessage("❌ Element artık bulunamıyor, döngü sonlandırılıyor");
         break;

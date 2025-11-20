@@ -8,9 +8,9 @@
 
 ### 🎯 Temel Özellikler
 
-- ✅ **Otomatik PR Tarama**: En yeni 15 PR'ı sıralı şekilde işler
+- ✅ **Otomatik PR Tarama**: En son güncellenen 15 PR'ı sıralı şekilde işler
 - ✅ **Yeni Pencere Desteği**: Popup'larda açılan PR detaylarını otomatik yakalar
-- ✅ **Akıllı Sıralama**: PR'ları oluşturma tarihine göre DESC sıralar
+- ✅ **Akıllı Sıralama**: PR'ları son güncellenme tarihine göre DESC sıralar
 - ✅ **Zaten İşlenmiş Kontrolü**: Duplicate işlemleri önler
 - ✅ **10 Dakika Güvenlik Döngüsü**: Background'da sürekli çalışır
 - ✅ **Rate Limit Koruması**: 15 saniye bekleme ile güvenli işlem
@@ -135,7 +135,7 @@ TK_SmartFlow.debugSort();
    ↓
 3. Ana sayfa → Görev listesi
    ↓
-4. Tablo DESC sıralama (en yeni üstte)
+4. Tablo DESC sıralama (en son güncellenen üstte)
    ↓
 5. İlk 15 PR taranır
    ↓
